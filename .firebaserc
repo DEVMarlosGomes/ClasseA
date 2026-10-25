@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "demo-classe-a",
+    "dev": "classe-a-barbearia-dev",
+    "prod": "classe-a-barbearia"
+  }
+}

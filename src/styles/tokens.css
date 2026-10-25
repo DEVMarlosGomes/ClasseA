@@ -1,0 +1,37 @@
+/* Classe A design tokens — see DESIGN.md. Gold calibrated against the supplied logo (avg #E9B542). */
+:root {
+  --ink-950: #050505;
+  --ink-900: #0b0b0b;
+  --ink-800: #141414;
+  --ink-700: #1e1e1e;
+  --ink-600: #2a2a2a;
+
+  --gold-400: #f2c75c;
+  --gold-500: #e9b542;
+  --gold-600: #c8962a;
+  --gold-700: #9a7220;
+
+  --text-100: #f5f1e8;
+  --text-400: #a39e93;
+
+  --success: #4caf7a;
+  --danger: #e05a4f;
+
+  --gold-metal: linear-gradient(135deg, #f6d47a 0%, #e5b03a 40%, #b8862b 70%, #f2c75c 100%);
+  --gold-hairline: rgba(233, 181, 66, 0.18);
+  --gold-hairline-strong: rgba(233, 181, 66, 0.38);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-micro: 150ms;
+  --dur-ui: 250ms;
+  --dur-section: 450ms;
+  --dur-hero: 800ms;
+
+  --radius-card: 20px;
+  --radius-control: 14px;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+
+  color-scheme: dark;
+}
