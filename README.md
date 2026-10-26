@@ -19,14 +19,14 @@ Web app mobile-first da Classe A Barbearia. O projeto reúne landing page, agend
 
 ## Arquitetura
 
-| Camada | Tecnologia e responsabilidade |
-| --- | --- |
-| Interface | React 19, TypeScript, Vite, Tailwind CSS, Radix UI e Framer Motion |
-| Estado e dados | TanStack Query, Zustand e React Hook Form + Zod |
-| Backend | Firebase Authentication, Cloud Firestore, Storage e Cloud Functions v2 |
-| Hospedagem | Firebase Hosting com fallback de SPA e PWA via Workbox |
-| Qualidade | ESLint, Vitest, Firebase Rules Unit Testing e Playwright |
-| Entrega | GitHub Actions para verificação, preview de pull request e produção na `main` |
+| Camada         | Tecnologia e responsabilidade                                                 |
+| -------------- | ----------------------------------------------------------------------------- |
+| Interface      | React 19, TypeScript, Vite, Tailwind CSS, Radix UI e Framer Motion            |
+| Estado e dados | TanStack Query, Zustand e React Hook Form + Zod                               |
+| Backend        | Firebase Authentication, Cloud Firestore, Storage e Cloud Functions v2        |
+| Hospedagem     | Firebase Hosting com fallback de SPA e PWA via Workbox                        |
+| Qualidade      | ESLint, Vitest, Firebase Rules Unit Testing e Playwright                      |
+| Entrega        | GitHub Actions para verificação, preview de pull request e produção na `main` |
 
 As leituras públicas da landing usam Firestore Lite. Áreas autenticadas carregam o SDK completo sob demanda para listeners em tempo real e cache persistente. Operações sensíveis, como criação de barbeiro, agendamento, cancelamento, pagamentos e exclusão de conta, passam por Functions e validam o papel do usuário no servidor.
 
@@ -141,7 +141,7 @@ Abra **Build > Storage**, crie o bucket padrão na região compatível e depois 
 
 ### 5. App Check
 
-Em **Build > App Check**, registre o app Web com **reCAPTCHA Enterprise**. Copie apenas a *site key* pública para `VITE_RECAPTCHA_ENTERPRISE_KEY` em `.env.production.local` e na variável do GitHub Actions.
+Em **Build > App Check**, registre o app Web com **reCAPTCHA Enterprise**. Copie apenas a _site key_ pública para `VITE_RECAPTCHA_ENTERPRISE_KEY` em `.env.production.local` e na variável do GitHub Actions.
 
 Primeiro publique com App Check em modo de monitoramento. Confira as métricas de requisições válidas e inválidas. Só depois habilite a imposição para Authentication, Firestore, Storage e Functions. O código inicializa App Check antes desses serviços e renova tokens automaticamente.
 
@@ -221,7 +221,15 @@ Configure no repositório:
 - variable `VITE_RECAPTCHA_ENTERPRISE_KEY`.
 - variable `ENABLE_FIREBASE_DEPLOY` com valor `true` somente depois de concluir a preparação de produção deste guia.
 
-Enquanto `ENABLE_FIREBASE_DEPLOY` estiver ausente ou diferente de `true`, pushes na `main` executam a verificação sem tentar publicar no Firebase. Proteja `main` exigindo o job `verify`. Use ambientes do GitHub com aprovação obrigatória para `deploy-production` se desejar um controle adicional.
+Enquanto `ENABLE_FIREBASE_DEPLOY` estiver ausente ou diferente de `true`, pushes na `main` executam a verificação
+sem tentar publicar no Firebase. Proteja `main` exigindo o job `verify`. Use ambientes do GitHub com aprovação
+obrigatória para `deploy-production` se desejar um controle adicional.
+
+## Deploy de testes em outros provedores
+
+O repositório inclui `vercel.json` e `render.yaml` para publicar o front na Vercel ou Render com fallback de SPA.
+Variáveis, autorização dos novos domínios no Firebase e limitações do backend estão documentadas em
+[`docs/DEPLOY-PREVIEWS.md`](docs/DEPLOY-PREVIEWS.md).
 
 ## Pagamentos
 
