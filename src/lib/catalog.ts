@@ -34,7 +34,11 @@ export function useShopSettings() {
       return { ...DEFAULT_SETTINGS, ...(snap.data() as Partial<ShopSettings> | undefined) };
     },
     staleTime: STALE,
-    placeholderData: DEFAULT_SETTINGS,
+    // Keep the public footer and contact information available when Firebase is
+    // temporarily unavailable. `initialDataUpdatedAt: 0` still makes the real
+    // settings request run immediately.
+    initialData: DEFAULT_SETTINGS,
+    initialDataUpdatedAt: 0,
   });
 }
 
