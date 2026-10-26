@@ -20,7 +20,13 @@ interface Options {
 
 /** Friendly, typed failure. `reason` lets the UI react (e.g. slot-taken sends the user back to step 4). */
 export function fail(
-  code: 'failed-precondition' | 'invalid-argument' | 'permission-denied' | 'not-found' | 'already-exists' | 'resource-exhausted',
+  code:
+    | 'failed-precondition'
+    | 'invalid-argument'
+    | 'permission-denied'
+    | 'not-found'
+    | 'already-exists'
+    | 'resource-exhausted',
   reason: string,
   message: string,
 ): never {
@@ -36,10 +42,15 @@ export function callable<I, O>(
   handler: (input: I, caller: Caller, req: CallableRequest) => Promise<O>,
   options: Options = {},
 ) {
+  // Preview deployments can exercise authenticated callables before reCAPTCHA Enterprise is
+  // configured. Turn enforcement on only after App Check metrics confirm valid tokens by setting
+  // ENFORCE_APP_CHECK=true in the Functions runtime and deploying again.
+  const enforceAppCheck = !IS_EMULATOR && process.env.ENFORCE_APP_CHECK === 'true';
   return onCall(
-    { region: REGION, enforceAppCheck: !IS_EMULATOR, cors: true, memory: '256MiB', timeoutSeconds: 30 },
+    { region: REGION, enforceAppCheck, cors: true, memory: '256MiB', timeoutSeconds: 30 },
     async (req) => {
-      if (!req.auth && !options.public) fail('permission-denied', 'unauthenticated', 'Entre na sua conta para continuar.');
+      if (!req.auth && !options.public)
+        fail('permission-denied', 'unauthenticated', 'Entre na sua conta para continuar.');
       const roles = (Array.isArray(req.auth?.token.roles) ? req.auth?.token.roles : []) as Role[];
       if (options.roles && !options.roles.some((r) => roles.includes(r))) {
         fail('permission-denied', 'forbidden', 'Você não tem permissão para fazer isso.');

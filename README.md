@@ -152,7 +152,7 @@ Abra **Build > Storage**, crie o bucket padrão na região compatível e depois 
 
 Em **Build > App Check**, registre o app Web com **reCAPTCHA Enterprise**. Copie apenas a _site key_ pública para `VITE_RECAPTCHA_ENTERPRISE_KEY` em `.env.production.local` e na variável do GitHub Actions.
 
-Primeiro publique com App Check em modo de monitoramento. Confira as métricas de requisições válidas e inválidas. Só depois habilite a imposição para Authentication, Firestore, Storage e Functions. O código inicializa App Check antes desses serviços e renova tokens automaticamente.
+Primeiro publique com App Check em modo de monitoramento. Confira as métricas de requisições válidas e inválidas. As callables permanecem sem imposição enquanto `ENFORCE_APP_CHECK` não for `true`, permitindo testar os previews antes de configurar o reCAPTCHA. Só depois habilite a imposição para Authentication, Firestore, Storage e Functions, defina `ENFORCE_APP_CHECK=true` no ambiente das Functions e implante novamente. O front inicializa App Check antes desses serviços e renova tokens automaticamente.
 
 ### 6. Regras, índices e Functions
 
