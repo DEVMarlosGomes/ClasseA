@@ -53,6 +53,8 @@ Previews públicos conectados à branch `main`:
 
 A landing já inclui os dados comerciais informados, os quatro planos mensais, os preços avulsos, as fotos reais do espaço e dos trabalhos e os profissionais Roberth, Igor Gabriel e Anderson CH. Igor aparece no centro, identificado como proprietário. Enquanto o Firestore estiver indisponível, o catálogo público usa esses dados locais de reserva para que a landing não fique vazia; o agendamento e as áreas autenticadas continuam dependendo do Firebase ativo.
 
+Endereço comercial: **Av. Miguel Badra, 1896 — Badra, Suzano/SP — CEP 08690-010**. O botão “Como chegar” usa o [local oficial no Google Maps](https://maps.app.goo.gl/L5kWnQNGbSM9qHtr6).
+
 Antes do deploy público ainda é obrigatório:
 
 1. ativar o Cloud Firestore em modo Native e região `southamerica-east1`;
