@@ -1,0 +1,96 @@
+name: CI and Firebase deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: firebase-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm --prefix functions ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - run: npm run test:rules
+      - run: npm run test:e2e
+
+  preview:
+    if: github.event_name == 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: classea-97dd2.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: classea-97dd2
+          VITE_FIREBASE_STORAGE_BUCKET: classea-97dd2.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '433868872038'
+          VITE_FIREBASE_APP_ID: '1:433868872038:web:0761741d1a2d6c4a1010a7'
+          VITE_FIREBASE_MEASUREMENT_ID: G-SRWEMNMXG4
+          VITE_RECAPTCHA_ENTERPRISE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_KEY }}
+          VITE_USE_EMULATORS: 'false'
+          VITE_SITE_URL: https://classea-97dd2.web.app
+      - run: npx firebase-tools hosting:channel:deploy pr-${{ github.event.number }} --expires 7d --project classea-97dd2 --non-interactive
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_FIREBASE_DEPLOY == 'true'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix functions ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: classea-97dd2.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: classea-97dd2
+          VITE_FIREBASE_STORAGE_BUCKET: classea-97dd2.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '433868872038'
+          VITE_FIREBASE_APP_ID: '1:433868872038:web:0761741d1a2d6c4a1010a7'
+          VITE_FIREBASE_MEASUREMENT_ID: G-SRWEMNMXG4
+          VITE_RECAPTCHA_ENTERPRISE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_KEY }}
+          VITE_USE_EMULATORS: 'false'
+          VITE_SITE_URL: https://classea-97dd2.web.app
+      - run: npx firebase-tools deploy --only firestore,storage,functions,hosting --project classea-97dd2 --non-interactive
+        env:
+          SITE_URL: https://classea-97dd2.web.app

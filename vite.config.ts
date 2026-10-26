@@ -52,6 +52,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/firebase/') || id.includes('node_modules/@firebase/')) {
+            if (id.includes('/firestore/lite/') || id.includes('firestore/dist/lite')) return 'firebase-firestore-lite';
             if (id.includes('firestore')) return 'firebase-firestore';
             if (id.includes('auth')) return 'firebase-auth';
             if (id.includes('functions')) return 'firebase-functions';
@@ -70,6 +71,7 @@ export default defineConfig({
       '@radix-ui/react-dialog', '@radix-ui/react-tabs', '@radix-ui/react-switch', '@radix-ui/react-toast',
       'lucide-react', 'clsx', 'tailwind-merge', 'date-fns', 'date-fns/locale', 'date-fns-tz',
       'firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions', 'firebase/storage', 'firebase/app-check',
+      'firebase/firestore/lite',
       'react-markdown', 'remark-gfm', 'qrcode',
     ],
   },

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { computeDayAvailability, generateSlots } from '@shared/slots';
 import type { AvailabilityPublic, Barber } from '@shared/types';
-import { loadFirestore } from '@/lib/firebase';
+import { loadFirestore, loadFirestoreLite } from '@/lib/firebase';
 import { nextDays, shopNow } from '@/lib/dates';
 
 export const availabilityId = (barberId: string, date: string) => `${barberId}_${date}`;
@@ -17,7 +17,7 @@ export function resolveAvailability(
 
 /** One-shot read of availabilityPublic for several days (chunks of 30 for the `in` operator). */
 export async function fetchAvailability(dates: string[]): Promise<Map<string, AvailabilityPublic>> {
-  const { db, collection, getDocs, query, where } = await loadFirestore();
+  const { db, collection, getDocs, query, where } = await loadFirestoreLite();
   const out = new Map<string, AvailabilityPublic>();
   for (let i = 0; i < dates.length; i += 30) {
     const snap = await getDocs(query(collection(db, 'availabilityPublic'), where('date', 'in', dates.slice(i, i + 30))));

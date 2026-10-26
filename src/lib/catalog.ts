@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Barber, Plan, Service, ShopSettings } from '@shared/types';
 import { DEFAULT_SETTINGS } from '@shared/defaults';
-import { loadFirestore } from './firebase';
+import { loadFirestoreLite } from './firebase';
 
 const STALE = 5 * 60 * 1000;
 
 async function fetchActive<T>(name: string): Promise<T[]> {
-  const { db, collection, getDocs, query, where } = await loadFirestore();
+  const { db, collection, getDocs, query, where } = await loadFirestoreLite();
   const snap = await getDocs(query(collection(db, name), where('active', '==', true)));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as unknown as T & { order?: number })
@@ -29,7 +29,7 @@ export function useShopSettings() {
   return useQuery({
     queryKey: ['settings', 'shop'],
     queryFn: async (): Promise<ShopSettings> => {
-      const { db, doc, getDoc } = await loadFirestore();
+      const { db, doc, getDoc } = await loadFirestoreLite();
       const snap = await getDoc(doc(db, 'settings/shop'));
       return { ...DEFAULT_SETTINGS, ...(snap.data() as Partial<ShopSettings> | undefined) };
     },

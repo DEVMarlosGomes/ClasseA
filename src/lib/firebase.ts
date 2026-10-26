@@ -71,6 +71,21 @@ export const loadFirestore = once(async () => {
   return { ...m, db };
 });
 
+/** Small, online-only client for public one-shot reads on the landing page. */
+export const loadFirestoreLite = once(async () => {
+  await loadAppCheck();
+  const m = await import('firebase/firestore/lite');
+  const db = m.getFirestore(firebaseApp());
+  if (USE_EMULATORS) {
+    try {
+      m.connectFirestoreEmulator(db, EMULATOR_HOST, 8080);
+    } catch {
+      // Already connected (HMR).
+    }
+  }
+  return { ...m, db };
+});
+
 export const loadAuth = once(async () => {
   await loadAppCheck();
   const m = await import('firebase/auth');
