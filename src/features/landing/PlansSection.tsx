@@ -11,31 +11,27 @@ export function PlansSection() {
   const monthly = data?.find((p) => p.period === 'monthly');
 
   return (
-    <section
-      id="planos"
-      aria-labelledby="planos-title"
-      className="scroll-mt-20 bg-ink-900/70 py-20 sm:py-28"
-    >
+    <section id="planos" aria-labelledby="planos-title" className="scroll-mt-20 bg-ink-900/70 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <div className="px-4 sm:px-6">
           <SectionTitle id="planos-title">Planos</SectionTitle>
           <p className="mx-auto mt-4 max-w-[48ch] text-center text-[16px] text-text-400">
-            Corte sempre em dia com valor fixo. Quanto maior o período, maior a economia.
+            Corte sempre em dia com valor fixo. Escolha a opção que combina com a sua rotina.
           </p>
         </div>
 
         {isError ? (
           <ErrorState onRetry={() => void refetch()} />
         ) : isLoading ? (
-          <div className="mt-10 grid gap-4 px-4 sm:px-6 md:grid-cols-3">
-            {[0, 1, 2].map((i) => (
+          <div className="mt-10 grid gap-4 px-4 sm:px-6 md:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[440px] rounded-[20px]" />
             ))}
           </div>
         ) : (
           <Reveal
             as="ul"
-            className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 pb-4 pt-2 sm:px-6 md:grid md:grid-cols-3 md:overflow-visible"
+            className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 pb-4 pt-2 sm:px-6 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-4"
           >
             {data?.map((plan) => (
               <RevealItem

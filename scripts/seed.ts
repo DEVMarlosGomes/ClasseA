@@ -7,16 +7,22 @@
  *
  * Emulator-only test accounts (never use in production) — password for all: ClasseA#2026
  *   dono@classea.test       admin
- *   rafael@classea.test     barber (also sees the admin panel? no — barber only)
- *   diego@classea.test      barber
- *   thiago@classea.test     barber
- *   cliente@classea.test    client with an active annual plan and a saved test card
+ *   roberth@classea.test    barber
+ *   igor@classea.test       barber
+ *   anderson@classea.test   barber
+ *   cliente@classea.test    client with an active monthly plan and a saved test card
  */
 import { readFileSync } from 'node:fs';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
-import { DEFAULT_SETTINGS, DEFAULT_TEMPLATE, LEGAL_VERSIONS, SEED_PLANS, SEED_SERVICES } from '../shared/defaults';
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_TEMPLATE,
+  LEGAL_VERSIONS,
+  SEED_PLANS,
+  SEED_SERVICES,
+} from '../shared/defaults';
 import { computeDayAvailability, endTime, generateSlots, lockSlices } from '../shared/slots';
 import { addDaysToDateKey, cycleKey, shopNow, shopTimeToDate } from '../shared/time';
 import type { Barber, Role } from '../shared/types';
@@ -67,7 +73,10 @@ async function upsertUser(email: string, name: string, roles: Role[], phone: str
 async function main() {
   console.log(`Seeding ${PROJECT}…`);
   // Start from a clean emulator so re-running the seed never duplicates data.
-  await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${PROJECT}/databases/(default)/documents`, { method: 'DELETE' });
+  await fetch(
+    `http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${PROJECT}/databases/(default)/documents`,
+    { method: 'DELETE' },
+  );
   const today = shopNow().date;
 
   await db.doc('settings/shop').set(DEFAULT_SETTINGS);
@@ -97,11 +106,31 @@ async function main() {
 
   await upsertUser('dono@classea.test', 'Dono Classe A', ['admin'], '+5511900000001');
 
-  // TODO(cliente): real barber names, photos and specialties.
   const barberDefs = [
-    { email: 'rafael@classea.test', name: 'Rafael', specialties: ['Degradê', 'Navalha'], all: true },
-    { email: 'diego@classea.test', name: 'Diego', specialties: ['Barba', 'Barboterapia'], all: true },
-    { email: 'thiago@classea.test', name: 'Thiago', specialties: ['Corte clássico', 'Infantil'], all: false },
+    {
+      email: 'roberth@classea.test',
+      name: 'Roberth',
+      photoUrl: '/images/barbers/roberth.jpeg',
+      specialties: ['Corte', 'Degradê'],
+      all: true,
+      featured: false,
+    },
+    {
+      email: 'igor@classea.test',
+      name: 'Igor Gabriel',
+      photoUrl: '/images/barbers/igor-gabriel.jpeg',
+      specialties: ['Corte', 'Barba', 'Acabamento'],
+      all: true,
+      featured: true,
+    },
+    {
+      email: 'anderson@classea.test',
+      name: 'Anderson CH',
+      photoUrl: '/images/barbers/anderson-ch.jpeg',
+      specialties: ['Corte', 'Barba'],
+      all: true,
+      featured: false,
+    },
   ];
   const barbers: Barber[] = [];
   for (const [i, b] of barberDefs.entries()) {
@@ -112,14 +141,19 @@ async function main() {
       uid,
       displayName: b.name,
       bio: `Barbeiro da Classe A. Especialista em ${b.specialties.join(' e ').toLowerCase()}.`,
-      photoUrl: null,
+      photoUrl: b.photoUrl,
       specialties: b.specialties,
-      serviceIds: b.all ? allIds : allIds.filter((id) => !['barboterapia', 'pigmentacao-de-barba'].includes(id)),
+      serviceIds: b.all
+        ? allIds
+        : allIds.filter((id) => !['barboterapia', 'pigmentacao-de-barba'].includes(id)),
       active: true,
       order: i + 1,
       weeklyTemplate: DEFAULT_TEMPLATE,
       slotIntervalMin: 30,
       bufferMin: 0,
+      featured: b.featured ?? false,
+      roleLabel: b.featured ? 'Proprietário' : undefined,
+      photoPosition: b.featured ? '68% center' : undefined,
     };
     const { id: _id, ...doc } = barber;
     void _id;
@@ -135,9 +169,10 @@ async function main() {
     ['felipe@classea.test', 'Felipe Rocha', '+5511943210987'],
   ] as const;
   const clients: { uid: string; name: string; phone: string }[] = [];
-  for (const [email, name, phone] of clientDefs) clients.push({ uid: await upsertUser(email, name, ['client'], phone), name, phone });
+  for (const [email, name, phone] of clientDefs)
+    clients.push({ uid: await upsertUser(email, name, ['client'], phone), name, phone });
 
-  // João: annual plan with a saved test card (4242).
+  // João: monthly plan with a saved test card (4242).
   const joao = clients[0]!;
   const pmRef = db.doc(`users/${joao.uid}/paymentMethods/seed-card`);
   await pmRef.set({
@@ -150,14 +185,14 @@ async function main() {
     token: 'mock_tok_approved_SEEDSEEDSEEDSEED',
     createdAt: FieldValue.serverTimestamp(),
   });
-  const annual = SEED_PLANS.find((p) => p.id === 'anual')!;
+  const demoPlan = SEED_PLANS.find((p) => p.id === 'cinco-cortes-sobrancelha-barba')!;
   const started = new Date(Date.now() - 20 * 86_400_000);
-  const subEnd = new Date(started.getTime() + 365 * 86_400_000);
+  const subEnd = new Date(started.getTime() + 30 * 86_400_000);
   await db.doc('subscriptions/seed-annual').set({
     clientId: joao.uid,
-    planId: annual.id,
-    planName: annual.name,
-    period: annual.period,
+    planId: demoPlan.id,
+    planName: demoPlan.name,
+    period: demoPlan.period,
     status: 'active',
     startedAt: Timestamp.fromDate(started),
     currentPeriodStart: Timestamp.fromDate(started),
@@ -165,7 +200,7 @@ async function main() {
     autoRenew: true,
     paymentMethodId: 'seed-card',
     pendingPlanId: null,
-    cutsPerMonth: annual.cutsPerMonth,
+    cutsPerMonth: demoPlan.cutsPerMonth,
     usage: { cycle: cycleKey(today), cutsUsed: 1 },
     lastPaymentId: 'seed-annual-payment',
     createdAt: FieldValue.serverTimestamp(),
@@ -174,10 +209,10 @@ async function main() {
     clientId: joao.uid,
     subscriptionId: 'seed-annual',
     appointmentId: null,
-    amountCents: annual.priceCents,
+    amountCents: demoPlan.priceCents,
     method: 'card_mock',
     status: 'approved',
-    description: `Plano ${annual.name}`,
+    description: `Plano ${demoPlan.name}`,
     gatewayRef: 'MOCK-SEED0001',
     createdAt: Timestamp.fromDate(started),
   });
@@ -198,7 +233,11 @@ async function main() {
     const key = `${barber.id}|${date}`;
     const avail = computeDayAvailability(barber, date, null, busy.get(key) ?? []);
     const duration = pick.reduce((sum, x) => sum + x.durationMin, 0);
-    const slots = generateSlots(avail, { durationMin: duration, now: past ? undefined : shopNow(), minAdvanceMin: 60 });
+    const slots = generateSlots(avail, {
+      durationMin: duration,
+      now: past ? undefined : shopNow(),
+      minAdvanceMin: 60,
+    });
     const start = slots[(i * 5) % Math.max(1, slots.length)];
     if (!start) return false;
     const client = clients[i % clients.length]!;
@@ -212,7 +251,10 @@ async function main() {
       clientPhone: client.phone,
       barberId: barber.id,
       barberName: barber.displayName,
-      services: pick.map((p) => ({ ...p, coveredByPlan: usePlan && SEED_SERVICES.find((x) => x.name === p.name)!.includedInPlans })),
+      services: pick.map((p) => ({
+        ...p,
+        coveredByPlan: usePlan && SEED_SERVICES.find((x) => x.name === p.name)!.includedInPlans,
+      })),
       date,
       start,
       end,
@@ -234,7 +276,9 @@ async function main() {
     });
     if (status === 'confirmed') {
       for (const hhmm of lockSlices(start, duration + barber.bufferMin, 15)) {
-        await db.doc(`slotLocks/${barber.id}_${date}_${hhmm}`).set({ appointmentId: ref.id, createdAt: FieldValue.serverTimestamp() });
+        await db
+          .doc(`slotLocks/${barber.id}_${date}_${hhmm}`)
+          .set({ appointmentId: ref.id, createdAt: FieldValue.serverTimestamp() });
       }
     }
     busy.set(key, [...(busy.get(key) ?? []), { start, end }]);
@@ -256,17 +300,36 @@ async function main() {
     for (let i = 0; i < 14; i++) {
       const date = addDaysToDateKey(today, i);
       const a = computeDayAvailability(barber, date, null, busy.get(`${barber.id}|${date}`) ?? []);
-      await db.doc(`availabilityPublic/${barber.id}_${date}`).set({ ...a, updatedAt: FieldValue.serverTimestamp() });
+      await db
+        .doc(`availabilityPublic/${barber.id}_${date}`)
+        .set({ ...a, updatedAt: FieldValue.serverTimestamp() });
     }
   }
 
   // Barber client books.
   const appts = await db.collection('appointments').get();
-  const book = new Map<string, { name: string; phone: string; visits: number; noShows: number; last: Timestamp | null; counts: Record<string, number> }>();
+  const book = new Map<
+    string,
+    {
+      name: string;
+      phone: string;
+      visits: number;
+      noShows: number;
+      last: Timestamp | null;
+      counts: Record<string, number>;
+    }
+  >();
   for (const d of appts.docs) {
     const a = d.data();
     const k = `${a.barberId}|${a.clientId}`;
-    const e = book.get(k) ?? { name: a.clientName, phone: a.clientPhone, visits: 0, noShows: 0, last: null as Timestamp | null, counts: {} as Record<string, number> };
+    const e = book.get(k) ?? {
+      name: a.clientName,
+      phone: a.clientPhone,
+      visits: 0,
+      noShows: 0,
+      last: null as Timestamp | null,
+      counts: {} as Record<string, number>,
+    };
     if (a.status === 'completed') {
       e.visits++;
       if (!e.last || a.startAt.toMillis() > e.last.toMillis()) e.last = a.startAt;
@@ -284,7 +347,10 @@ async function main() {
       visits: e.visits,
       noShows: e.noShows,
       lastVisitAt: e.last,
-      favoriteServices: Object.entries(e.counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n),
+      favoriteServices: Object.entries(e.counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([n]) => n),
       serviceCounts: e.counts,
       hasActivePlan: clientId === joao.uid,
       privateNotes: clientId === joao.uid ? 'Máquina 2 nas laterais, risca do lado esquerdo.' : '',

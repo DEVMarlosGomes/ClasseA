@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Crown } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Barber } from '@shared/types';
 import { Reveal, RevealItem } from '@/components/Reveal';
@@ -36,7 +36,11 @@ export function BarbersSection() {
                   </li>
                 ))
               : data?.map((b) => (
-                  <RevealItem as="li" key={b.id} className="w-[72%] max-w-[300px] shrink-0 snap-center lg:w-auto lg:max-w-none">
+                  <RevealItem
+                    as="li"
+                    key={b.id}
+                    className="w-[72%] max-w-[300px] shrink-0 snap-center lg:w-auto lg:max-w-none"
+                  >
                     <BarberCard barber={b} />
                   </RevealItem>
                 ))}
@@ -51,7 +55,7 @@ function BarberCard({ barber }: { barber: Barber }) {
   return (
     <Link
       to={`/agendar?barbeiro=${barber.id}`}
-      className="group relative block overflow-hidden rounded-[20px] border border-gold-500/15 bg-ink-800 transition-[border-color] duration-300 hover:border-gold-500/45 focus-visible:border-gold-500/45"
+      className={`group relative block overflow-hidden rounded-[20px] bg-ink-800 transition-[border-color,transform,box-shadow] duration-300 hover:border-gold-500/45 focus-visible:border-gold-500/45 ${barber.featured ? 'border border-gold-500/70 shadow-[0_24px_60px_-28px_rgba(233,181,66,0.75)] lg:-translate-y-3' : 'border border-gold-500/15'}`}
       aria-label={`Agendar com ${barber.displayName}`}
     >
       <div className="relative aspect-[4/5] overflow-hidden">
@@ -63,6 +67,7 @@ function BarberCard({ barber }: { barber: Barber }) {
             width={600}
             height={750}
             className="h-full w-full object-cover grayscale transition-[filter,transform] duration-700 ease-brand group-hover:scale-[1.03] group-hover:grayscale-0 group-focus-visible:grayscale-0"
+            style={{ objectPosition: barber.photoPosition ?? 'center' }}
           />
         ) : (
           <div className="relative grid h-full w-full place-items-center bg-[radial-gradient(80%_60%_at_50%_35%,#1e1a12,#0b0b0b)]">
@@ -72,16 +77,28 @@ function BarberCard({ barber }: { barber: Barber }) {
             </span>
           </div>
         )}
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-950 via-ink-950/70 to-transparent" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-950 via-ink-950/70 to-transparent"
+        />
       </div>
       <div className="absolute inset-x-0 bottom-0 p-5">
+        {barber.roleLabel && (
+          <span className="font-label mb-3 inline-flex items-center gap-1.5 rounded-full bg-gold-500 px-3 py-1 text-[11px] uppercase tracking-[0.1em] text-ink-950">
+            <Crown className="size-3.5" strokeWidth={2} aria-hidden="true" />
+            {barber.roleLabel}
+          </span>
+        )}
         <h3 className="font-label text-[28px] leading-none text-text-100">{barber.displayName}</h3>
         {barber.specialties.length > 0 && (
           <p className="mt-2 text-[14px] text-text-400">{barber.specialties.join(' · ')}</p>
         )}
         <span className="font-label mt-4 inline-flex min-h-11 items-center gap-1.5 text-[14px] text-gold-400">
           Agendar com {barber.displayName.split(' ')[0]}
-          <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={1.75} />
+          <ArrowRight
+            className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+            strokeWidth={1.75}
+          />
         </span>
       </div>
     </Link>

@@ -59,6 +59,9 @@ export interface Barber {
   weeklyTemplate: WeeklyTemplate;
   slotIntervalMin: number;
   bufferMin: number;
+  featured?: boolean;
+  roleLabel?: string;
+  photoPosition?: string;
 }
 
 export interface BlockRange extends TimeRange {
@@ -99,11 +102,7 @@ export interface Service {
 }
 
 export type AppointmentStatus =
-  | 'confirmed'
-  | 'completed'
-  | 'no_show'
-  | 'cancelled_by_client'
-  | 'cancelled_by_barber';
+  'confirmed' | 'completed' | 'no_show' | 'cancelled_by_client' | 'cancelled_by_barber';
 
 export type PaymentMode = 'plan' | 'pay_at_shop' | 'card_mock' | 'pix_mock';
 
@@ -155,6 +154,9 @@ export interface Plan {
   highlight: boolean;
   active: boolean;
   order: number;
+  regularPriceCents?: number;
+  savingsCents?: number;
+  availabilityLabel?: string;
 }
 
 export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled' | 'expired';
@@ -225,6 +227,7 @@ export interface ShopSettings {
     state: string;
     zip: string;
     mapsQuery: string;
+    mapsUrl?: string;
   };
   whatsapp: string; // E.164 digits, e.g. 5511999999999
   instagram: string;

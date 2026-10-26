@@ -6,6 +6,7 @@ import { buttonClass } from '@/components/ui/Button';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { useShopSettings } from '@/lib/catalog';
 import { waLink } from '@/lib/dates';
+import { isPlaceholder } from '@shared/defaults';
 import { PlaceholderText, formatAddress, mapsUrl } from './shopInfo';
 
 export function LocationSection() {
@@ -15,7 +16,11 @@ export function LocationSection() {
   const query = encodeURIComponent(s.address.mapsQuery || formatAddress(s));
 
   return (
-    <section id="contato" aria-labelledby="contato-title" className="scroll-mt-20 bg-ink-900/70 px-4 py-20 sm:px-6 sm:py-28">
+    <section
+      id="contato"
+      aria-labelledby="contato-title"
+      className="scroll-mt-20 bg-ink-900/70 px-4 py-20 sm:px-6 sm:py-28"
+    >
       <div className="mx-auto max-w-6xl">
         <SectionTitle id="contato-title">Localização e contato</SectionTitle>
         <Reveal className="mt-10 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
@@ -35,7 +40,11 @@ export function LocationSection() {
                 className="group absolute inset-0 grid place-items-center bg-[radial-gradient(60%_60%_at_50%_45%,rgba(233,181,66,0.12),transparent_70%)] p-6 text-center"
               >
                 <span className="flex flex-col items-center gap-3">
-                  <MapPin className="size-8 text-gold-500 transition-transform duration-300 group-hover:-translate-y-1" strokeWidth={1.25} aria-hidden="true" />
+                  <MapPin
+                    className="size-8 text-gold-500 transition-transform duration-300 group-hover:-translate-y-1"
+                    strokeWidth={1.25}
+                    aria-hidden="true"
+                  />
                   <span className="font-label text-[18px] text-text-100">Carregar mapa</span>
                   <span className="max-w-[34ch] text-[13px] text-text-400">
                     O mapa é do Google e só carrega depois do seu clique, para proteger sua privacidade.
@@ -73,19 +82,26 @@ export function LocationSection() {
               </div>
             </div>
             <div className="mt-8 grid gap-2 sm:grid-cols-2">
-              <a href={waLink(s.whatsapp, 'Olá! Vim pelo site da Classe A.')} target="_blank" rel="noopener noreferrer" className={buttonClass('primary', 'md')}>
+              <a
+                href={waLink(s.whatsapp, 'Olá! Vim pelo site da Classe A.')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonClass('primary', 'md')}
+              >
                 <WhatsAppIcon className="size-5" />
                 WhatsApp
               </a>
-              <a
-                href={`https://instagram.com/${s.instagram}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClass('secondary', 'md')}
-              >
-                <InstagramIcon className="size-5" />
-                Instagram
-              </a>
+              {!isPlaceholder(s.instagram) && (
+                <a
+                  href={`https://instagram.com/${s.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonClass('secondary', 'md')}
+                >
+                  <InstagramIcon className="size-5" />
+                  Instagram
+                </a>
+              )}
               <a
                 href={mapsUrl(s)}
                 target="_blank"

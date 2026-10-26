@@ -12,7 +12,7 @@ export const NAV_LINKS = [
   { href: '/#servicos', label: 'Serviços' },
   { href: '/#planos', label: 'Planos' },
   { href: '/#barbeiros', label: 'Barbeiros' },
-  { href: '/#espaco', label: 'O Espaço' },
+  { href: '/#espaco', label: 'Nosso trabalho' },
   { href: '/#contato', label: 'Contato' },
 ];
 
@@ -24,7 +24,11 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
   const { user, roles } = useAuth();
   useMotionValueEvent(scrollY, 'change', (y) => setScrolled(solid || y > 24));
 
-  const accountHref = roles.includes('barber') ? '/barbeiro' : roles.includes('admin') ? '/admin' : '/cliente';
+  const accountHref = roles.includes('barber')
+    ? '/barbeiro'
+    : roles.includes('admin')
+      ? '/admin'
+      : '/cliente';
 
   return (
     <>

@@ -5,6 +5,7 @@ import { Logo, LogoMark } from '@/components/ui/Logo';
 import { useShopSettings } from '@/lib/catalog';
 import { formatPhone, waLink } from '@/lib/dates';
 import { openCookiePreferences } from '@/features/consent/store';
+import { isPlaceholder } from '@shared/defaults';
 import { PlaceholderText } from './shopInfo';
 
 export const SiteFooter = forwardRef<HTMLElement>(function SiteFooter(_, ref) {
@@ -27,20 +28,38 @@ export const SiteFooter = forwardRef<HTMLElement>(function SiteFooter(_, ref) {
           <h2 className="font-label text-[14px] text-gold-500">Contato</h2>
           <ul className="mt-4 space-y-1 text-[14px]">
             <li>
-              <a href={waLink(s.whatsapp)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 text-text-100 hover:text-gold-400">
-                <WhatsAppIcon className="size-4" /> <span className="tabular">{formatPhone(`+${s.whatsapp}`)}</span>
+              <a
+                href={waLink(s.whatsapp)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-2 text-text-100 hover:text-gold-400"
+              >
+                <WhatsAppIcon className="size-4" />{' '}
+                <span className="tabular">{formatPhone(`+${s.whatsapp}`)}</span>
               </a>
             </li>
-            <li>
-              <a href={`https://instagram.com/${s.instagram}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 text-text-100 hover:text-gold-400">
-                <InstagramIcon className="size-4" /> @{s.instagram}
-              </a>
-            </li>
-            <li>
-              <a href={`mailto:${s.email}`} className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400">
-                {s.email}
-              </a>
-            </li>
+            {!isPlaceholder(s.instagram) && (
+              <li>
+                <a
+                  href={`https://instagram.com/${s.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center gap-2 text-text-100 hover:text-gold-400"
+                >
+                  <InstagramIcon className="size-4" /> @{s.instagram}
+                </a>
+              </li>
+            )}
+            {!isPlaceholder(s.email) && (
+              <li>
+                <a
+                  href={`mailto:${s.email}`}
+                  className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400"
+                >
+                  {s.email}
+                </a>
+              </li>
+            )}
           </ul>
         </div>
 
@@ -48,22 +67,35 @@ export const SiteFooter = forwardRef<HTMLElement>(function SiteFooter(_, ref) {
           <h2 className="font-label text-[14px] text-gold-500">Privacidade</h2>
           <ul className="mt-4 space-y-1 text-[14px]">
             <li>
-              <Link to="/privacidade" className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400">
+              <Link
+                to="/privacidade"
+                className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400"
+              >
                 Política de Privacidade
               </Link>
             </li>
             <li>
-              <Link to="/termos" className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400">
+              <Link
+                to="/termos"
+                className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400"
+              >
                 Termos de Uso
               </Link>
             </li>
             <li>
-              <Link to="/cookies" className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400">
+              <Link
+                to="/cookies"
+                className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400"
+              >
                 Política de Cookies
               </Link>
             </li>
             <li>
-              <button type="button" onClick={openCookiePreferences} className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400">
+              <button
+                type="button"
+                onClick={openCookiePreferences}
+                className="inline-flex min-h-11 items-center text-text-100 hover:text-gold-400"
+              >
                 Preferências de cookies
               </button>
             </li>

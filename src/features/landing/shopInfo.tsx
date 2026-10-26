@@ -7,6 +7,7 @@ export function formatAddress(s: ShopSettings): string {
 }
 
 export function mapsUrl(s: ShopSettings): string {
+  if (s.address.mapsUrl) return s.address.mapsUrl;
   const q = s.address.mapsQuery || formatAddress(s);
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`;
 }
@@ -19,7 +20,10 @@ export function PlaceholderText({ value, fallback = '' }: { value: string; fallb
   if (!isPlaceholder(value)) return <>{value}</>;
   if (import.meta.env.DEV) {
     return (
-      <span className="rounded border border-dashed border-gold-700 px-1 text-[0.9em] text-gold-600" title="Dado a confirmar com a barbearia">
+      <span
+        className="rounded border border-dashed border-gold-700 px-1 text-[0.9em] text-gold-600"
+        title="Dado a confirmar com a barbearia"
+      >
         {value.replace('TODO(cliente) ', '')}
       </span>
     );

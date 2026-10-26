@@ -46,13 +46,20 @@ public/               marca, imagens, robots.txt e manifestos públicos
 
 O código compila e usa o Firebase Emulator Suite no desenvolvimento. O app Web de produção já está registrado no projeto Firebase `classea-97dd2`, e o Hosting padrão é `https://classea-97dd2.web.app`.
 
+Previews públicos conectados à branch `main`:
+
+- Vercel: `https://classeabarbearia.vercel.app`;
+- Render: `https://classe-a-barbearia-preview.onrender.com`.
+
+A landing já inclui os dados comerciais informados, os quatro planos mensais, os preços avulsos, as fotos reais do espaço e dos trabalhos e os profissionais Roberth, Igor Gabriel e Anderson CH. Igor aparece no centro, identificado como proprietário. Enquanto o Firestore estiver indisponível, o catálogo público usa esses dados locais de reserva para que a landing não fique vazia; o agendamento e as áreas autenticadas continuam dependendo do Firebase ativo.
+
 Antes do deploy público ainda é obrigatório:
 
 1. ativar o Cloud Firestore em modo Native e região `southamerica-east1`;
 2. confirmar que o projeto está no plano Blaze, necessário para Cloud Functions e tarefas agendadas;
 3. habilitar os provedores de Authentication;
 4. criar a chave reCAPTCHA Enterprise do App Check;
-5. substituir todos os valores `TODO(cliente)` em `/admin/configuracoes`, serviços, planos, barbeiros e documentos legais;
+5. informar Instagram, e-mail e horários oficiais em `/admin/configuracoes`;
 6. obter revisão jurídica das minutas de Privacidade, Termos e Cookies;
 7. configurar o envio real de e-mail. WhatsApp continua intencionalmente desativado até a escolha de um provedor;
 8. executar a lista de validação e só então liberar o Hosting de produção.
@@ -85,7 +92,7 @@ URLs locais:
 Contas locais, todas com a senha `ClasseA#2026`:
 
 - `dono@classea.test` — administrador;
-- `rafael@classea.test`, `diego@classea.test`, `thiago@classea.test` — barbeiros;
+- `roberth@classea.test`, `igor@classea.test`, `anderson@classea.test` — barbeiros;
 - `cliente@classea.test` — cliente com plano e cartão mock.
 
 O arquivo `.env.local` aponta para `demo-classe-a` e mantém `VITE_USE_EMULATORS=true`. O arquivo ignorado `.env.production.local` contém a configuração pública do app Web de produção e mantém `VITE_USE_EMULATORS=false`.
@@ -177,7 +184,7 @@ $env:ADMIN_PHONE='5511999999999'
 npm run bootstrap:production
 ```
 
-O script exige a repetição exata do project ID, recusa projetos `demo-*`, cria somente o primeiro admin, configura claims e adiciona catálogo/configuração mínimos sem clientes ou agendamentos fictícios. Ele imprime um link único para definir a senha.
+O script exige a repetição exata do project ID, recusa projetos `demo-*`, cria somente o primeiro admin, configura claims e adiciona as configurações, os serviços, os planos e os perfis públicos dos três barbeiros sem clientes ou agendamentos fictícios. Ele imprime um link único para definir a senha.
 
 Entre em `/admin` e substitua todos os dados de exemplo. Cadastre equipe, serviços, preços, planos e versões jurídicas definitivas. Não rode `npm run seed` contra produção; esse comando é exclusivo dos emuladores.
 

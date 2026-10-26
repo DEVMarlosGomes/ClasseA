@@ -13,6 +13,9 @@ export const PERIOD_LABEL: Record<Plan['period'], string> = {
 };
 
 export function planSavings(plan: Plan, monthly: Plan | undefined): number {
+  if (plan.regularPriceCents && plan.regularPriceCents > plan.priceCents) {
+    return Math.round(((plan.regularPriceCents - plan.priceCents) / plan.regularPriceCents) * 100);
+  }
   if (!monthly || plan.period === 'monthly') return 0;
   return savingsPercent(monthly.priceCents, PERIOD_MONTHS[plan.period], plan.priceCents);
 }
@@ -35,8 +38,10 @@ export function PlanCard({ plan, monthly, action, current, className }: PlanCard
         plan.highlight ? 'bg-[#0d0c0a]' : 'panel',
       )}
     >
-      {plan.highlight && <div aria-hidden="true" className="marble pointer-events-none absolute inset-0 opacity-[0.045]" />}
-      <div className="relative flex items-center justify-between gap-3">
+      {plan.highlight && (
+        <div aria-hidden="true" className="marble pointer-events-none absolute inset-0 opacity-[0.045]" />
+      )}
+      <div className="relative flex flex-col items-start gap-3">
         <h3 className="font-label text-[28px] text-text-100">{plan.name}</h3>
         {current ? (
           <Badge tone="success">Seu plano</Badge>
@@ -48,14 +53,27 @@ export function PlanCard({ plan, monthly, action, current, className }: PlanCard
       </div>
 
       <div className="relative mt-6">
+        {plan.regularPriceCents && (
+          <p className="tabular mb-1 text-[14px] text-text-400 line-through">
+            Avulso sairia por {formatBRL(plan.regularPriceCents)}
+          </p>
+        )}
         <p className="tabular text-[40px] font-bold leading-none tracking-tight text-gold-500 sm:text-[44px]">
           {formatBRL(plan.priceCents)}
         </p>
         <p className="mt-2 text-[14px] text-text-400">{PERIOD_LABEL[plan.period]}</p>
+        {plan.savingsCents && (
+          <p className="tabular mt-3 inline-flex rounded-full border border-gold-500/25 bg-gold-500/10 px-3 py-1.5 text-[14px] font-bold text-gold-400">
+            Economize {formatBRL(plan.savingsCents)} no mês
+          </p>
+        )}
         {plan.period !== 'monthly' && (
           <p className="tabular mt-3 text-[16px] text-text-100">
-            Equivale a <strong className="text-gold-400">{formatBRL(plan.monthlyEquivalentCents)}</strong> por mês
-            {savings > 0 && plan.highlight && <span className="text-text-400"> · {savings}% de economia</span>}
+            Equivale a <strong className="text-gold-400">{formatBRL(plan.monthlyEquivalentCents)}</strong> por
+            mês
+            {savings > 0 && plan.highlight && (
+              <span className="text-text-400"> · {savings}% de economia</span>
+            )}
           </p>
         )}
       </div>
@@ -72,6 +90,11 @@ export function PlanCard({ plan, monthly, action, current, className }: PlanCard
       </ul>
 
       <div className="relative mt-8">{action}</div>
+      {plan.availabilityLabel && (
+        <p className="font-label relative mt-3 text-center text-[11px] uppercase tracking-[0.12em] text-text-400">
+          {plan.availabilityLabel}
+        </p>
+      )}
     </div>
   );
 
