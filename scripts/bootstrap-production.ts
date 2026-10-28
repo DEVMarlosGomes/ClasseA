@@ -54,6 +54,8 @@ async function main() {
 
   const roles: Role[] = ['admin'];
   await auth.setCustomUserClaims(user.uid, { ...(user.customClaims ?? {}), roles });
+  // Spark mode has no trusted Functions to read custom claims, so the client and rules use this document.
+  await db.doc(`roles/${user.uid}`).set({ roles }, { merge: true });
   await db.doc(`users/${user.uid}`).set(
     {
       name,

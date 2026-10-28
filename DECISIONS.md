@@ -3,9 +3,9 @@
 ## Firebase e ambientes
 
 - O desenvolvimento usa exclusivamente o projeto fictício `demo-classe-a` no Emulator Suite. A configuração real fica em `.env.production.local`, ignorada pelo Git.
-- O projeto real associado é `classea-97dd2`; o Realtime Database existente não é usado porque disponibilidade, regras, transações e listeners foram modelados para Cloud Firestore.
+- O projeto real associado é `barbeariaclassea-9f2b4`; o Realtime Database existente não é usado porque disponibilidade, regras, transações e listeners foram modelados para Cloud Firestore.
 - O Firestore deve ser criado em `southamerica-east1`. Essa escolha reduz latência para São Paulo e coincide com a região das Functions.
-- O alias padrão continua apontando para `demo-classe-a`; produção exige `--project classea-97dd2` ou o alias `prod`. Isso reduz deploy acidental.
+- O alias padrão continua apontando para `demo-classe-a`; produção exige `--project barbeariaclassea-9f2b4` ou o alias `prod`. Isso reduz deploy acidental.
 - O bootstrap de produção exige confirmação explícita do project ID e Application Default Credentials. Ele não cria dados pessoais fictícios nem agendamentos.
 
 ## Produto

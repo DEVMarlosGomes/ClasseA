@@ -30,7 +30,7 @@ interface Message {
 }
 
 function html(title: string, body: string, link?: string): string {
-  const site = process.env.SITE_URL ?? 'https://classea-97dd2.web.app';
+  const site = process.env.SITE_URL ?? 'https://barbeariaclassea-9f2b4.web.app';
   return `<div style="background:#050505;padding:32px;font-family:Arial,sans-serif;color:#F5F1E8">
   <p style="color:#E9B542;letter-spacing:.12em;text-transform:uppercase;font-size:12px;margin:0 0 16px">Classe A Barbearia</p>
   <h1 style="font-size:22px;margin:0 0 12px">${title}</h1>

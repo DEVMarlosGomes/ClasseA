@@ -21,6 +21,8 @@ services:
         sync: false
       - key: VITE_USE_EMULATORS
         value: 'false'
+      - key: VITE_SPARK
+        value: 'true'
     routes:
       - type: rewrite
         source: /*

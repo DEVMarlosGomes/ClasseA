@@ -12,7 +12,8 @@ import { toast } from '@/components/ui/Toast';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { call, errorMessage } from '@/lib/api';
 import { formatInstant, formatPhone } from '@/lib/dates';
-import { loadAuth, loadFirestore, loadStorage } from '@/lib/firebase';
+import { loadAuth, loadFirestore } from '@/lib/firebase';
+import { uploadImage } from '@/lib/uploadImage';
 import { authErrorMessage, useAuth } from '@/features/auth/AuthProvider';
 import { passwordStrength } from '@/features/auth/forms';
 import { openCookiePreferences } from '@/features/consent/store';
@@ -71,10 +72,7 @@ function PersonalData() {
     }
     setUploading(true);
     try {
-      const { storage, ref, uploadBytes, getDownloadURL } = await loadStorage();
-      const r = ref(storage, `avatars/${user.uid}/avatar`);
-      await uploadBytes(r, file, { contentType: file.type });
-      const url = await getDownloadURL(r);
+      const url = await uploadImage(`avatars/${user.uid}/avatar`, file);
       const { db, doc, updateDoc } = await loadFirestore();
       await updateDoc(doc(db, `users/${user.uid}`), { avatarUrl: url });
       toast.success('Foto atualizada.');
@@ -90,16 +88,41 @@ function PersonalData() {
       <div className="mb-6 flex items-center gap-4">
         <Avatar name={name || user?.email || '?'} src={profile?.avatarUrl} size={72} />
         <div>
-          <Button size="sm" variant="secondary" loading={uploading} icon={<Camera className="size-4" strokeWidth={1.5} />} onClick={() => fileRef.current?.click()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={uploading}
+            icon={<Camera className="size-4" strokeWidth={1.5} />}
+            onClick={() => fileRef.current?.click()}
+          >
             Trocar foto
           </Button>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])}
+          />
           <p className="mt-1 text-[12px] text-text-400">{user?.email}</p>
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Nome completo" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" />
-        <MaskedInput label="Celular com DDD" mask="(00) 00000-0000" inputMode="tel" value={phone} onValueChange={setPhone} error={errors.phone} />
+        <Input
+          label="Nome completo"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={errors.name}
+          autoComplete="name"
+        />
+        <MaskedInput
+          label="Celular com DDD"
+          mask="(00) 00000-0000"
+          inputMode="tel"
+          value={phone}
+          onValueChange={setPhone}
+          error={errors.phone}
+        />
       </div>
       <Button className="mt-5" loading={busy} onClick={save}>
         Salvar dados
@@ -118,7 +141,13 @@ function PasswordSection() {
   return (
     <Section title="Senha">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Senha atual" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        <Input
+          label="Senha atual"
+          type="password"
+          autoComplete="current-password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+        />
         <Input
           label="Nova senha"
           type="password"
@@ -136,7 +165,8 @@ function PasswordSection() {
         onClick={async () => {
           setBusy(true);
           try {
-            const { auth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await loadAuth();
+            const { auth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } =
+              await loadAuth();
             const u = auth.currentUser!;
             await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email!, current));
             await updatePassword(u, next);
@@ -182,18 +212,26 @@ function PrivacySection() {
             }
           }}
         />
-        <button onClick={openCookiePreferences} className="flex min-h-14 w-full items-center justify-between py-4 text-left">
+        <button
+          onClick={openCookiePreferences}
+          className="flex min-h-14 w-full items-center justify-between py-4 text-left"
+        >
           <span>
             <span className="block text-[16px] font-medium text-text-100">Preferências de cookies</span>
-            <span className="block text-[14px] text-text-400">Escolha o que podemos usar neste navegador.</span>
+            <span className="block text-[14px] text-text-400">
+              Escolha o que podemos usar neste navegador.
+            </span>
           </span>
           <ChevronRight className="size-5 text-text-400" strokeWidth={1.5} />
         </button>
         <div className="py-4">
           <p className="text-[16px] font-medium text-text-100">Documentos aceitos</p>
           <p className="tabular mt-1 text-[14px] text-text-400">
-            Termos de Uso v{consents?.termsVersion ?? '—'} · Política de Privacidade v{consents?.privacyVersion ?? '—'}
-            {consents?.acceptedAt ? ` · aceitos em ${formatInstant(consents.acceptedAt.toDate(), 'dd/MM/yyyy')}` : ''}
+            Termos de Uso v{consents?.termsVersion ?? '—'} · Política de Privacidade v
+            {consents?.privacyVersion ?? '—'}
+            {consents?.acceptedAt
+              ? ` · aceitos em ${formatInstant(consents.acceptedAt.toDate(), 'dd/MM/yyyy')}`
+              : ''}
           </p>
           <div className="mt-2 flex gap-4 text-[14px]">
             <Link to="/termos" className="min-h-11 py-2 text-gold-400 underline">
@@ -206,7 +244,9 @@ function PrivacySection() {
         </div>
         <div className="py-4">
           <p className="text-[16px] font-medium text-text-100">Meus dados</p>
-          <p className="mt-1 text-[14px] text-text-400">Baixe tudo o que guardamos sobre você em um arquivo JSON.</p>
+          <p className="mt-1 text-[14px] text-text-400">
+            Baixe tudo o que guardamos sobre você em um arquivo JSON.
+          </p>
           <Button
             className="mt-3"
             size="sm"
@@ -247,8 +287,8 @@ function DeleteAccount() {
   return (
     <Section title="Excluir conta">
       <p className="text-[14px] leading-relaxed text-text-400">
-        Apagamos seu perfil, cartões salvos e as anotações dos barbeiros sobre você, e cancelamos seus horários futuros e o plano. Por
-        obrigação legal, guardamos as cobranças por 5 anos, sem seu nome.
+        Apagamos seu perfil, cartões salvos e as anotações dos barbeiros sobre você, e cancelamos seus
+        horários futuros e o plano. Por obrigação legal, guardamos as cobranças por 5 anos, sem seu nome.
       </p>
       <Button className="mt-4" size="sm" variant="danger" onClick={() => setOpen(true)}>
         Excluir minha conta
@@ -287,7 +327,12 @@ function DeleteAccount() {
           <li>Cancelados: agendamentos futuros e assinatura.</li>
           <li>Mantidos sem identificação: cobranças (prazo fiscal de 5 anos) e histórico da agenda.</li>
         </ul>
-        <Input label='Digite "EXCLUIR" para confirmar' value={text} onChange={(e) => setText(e.target.value.toUpperCase())} autoComplete="off" />
+        <Input
+          label='Digite "EXCLUIR" para confirmar'
+          value={text}
+          onChange={(e) => setText(e.target.value.toUpperCase())}
+          autoComplete="off"
+        />
       </Sheet>
     </Section>
   );
@@ -311,7 +356,12 @@ export default function ClientProfilePage() {
       <PasswordSection />
       <PrivacySection />
       <DeleteAccount />
-      <Button variant="ghost" icon={<LogOut className="size-4" strokeWidth={1.5} />} onClick={() => void signOut().then(() => navigate('/'))} className="md:hidden">
+      <Button
+        variant="ghost"
+        icon={<LogOut className="size-4" strokeWidth={1.5} />}
+        onClick={() => void signOut().then(() => navigate('/'))}
+        className="md:hidden"
+      >
         Sair da conta
       </Button>
     </div>

@@ -7,10 +7,16 @@ import { type FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 
 const env = import.meta.env;
 export const USE_EMULATORS = env.VITE_USE_EMULATORS === 'true';
+/**
+ * Spark (free) plan: no Cloud Functions or Storage. The callables run in the browser (src/lib/spark),
+ * roles live in roles/{uid} instead of custom claims and photos are stored inline in Firestore.
+ * Test environments only: firestore.spark.rules trusts signed-in clients far more than production.
+ */
+export const SPARK = env.VITE_SPARK === 'true';
 export const FUNCTIONS_REGION = 'southamerica-east1';
 const EMULATOR_HOST = typeof location !== 'undefined' ? location.hostname : '127.0.0.1';
 
-const config = {
+export const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY,
   authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: env.VITE_FIREBASE_PROJECT_ID,
@@ -21,7 +27,7 @@ const config = {
 };
 
 export function firebaseApp(): FirebaseApp {
-  return getApps().length ? getApp() : initializeApp(config);
+  return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 
 function once<T>(fn: () => Promise<T>): () => Promise<T> {

@@ -50,16 +50,17 @@ jobs:
       - run: npm run build
         env:
           VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: classea-97dd2.firebaseapp.com
-          VITE_FIREBASE_PROJECT_ID: classea-97dd2
-          VITE_FIREBASE_STORAGE_BUCKET: classea-97dd2.firebasestorage.app
-          VITE_FIREBASE_MESSAGING_SENDER_ID: '433868872038'
-          VITE_FIREBASE_APP_ID: '1:433868872038:web:0761741d1a2d6c4a1010a7'
-          VITE_FIREBASE_MEASUREMENT_ID: G-SRWEMNMXG4
+          VITE_FIREBASE_AUTH_DOMAIN: barbeariaclassea-9f2b4.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: barbeariaclassea-9f2b4
+          VITE_FIREBASE_STORAGE_BUCKET: barbeariaclassea-9f2b4.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '714519979744'
+          VITE_FIREBASE_APP_ID: '1:714519979744:web:d5771be44fa016c9a81285'
+          VITE_FIREBASE_MEASUREMENT_ID: G-PKBWGQ92RF
           VITE_RECAPTCHA_ENTERPRISE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_KEY }}
           VITE_USE_EMULATORS: 'false'
-          VITE_SITE_URL: https://classea-97dd2.web.app
-      - run: npx firebase-tools hosting:channel:deploy pr-${{ github.event.number }} --expires 7d --project classea-97dd2 --non-interactive
+          VITE_SPARK: 'true'
+          VITE_SITE_URL: https://barbeariaclassea-9f2b4.web.app
+      - run: npx firebase-tools hosting:channel:deploy pr-${{ github.event.number }} --expires 7d --project barbeariaclassea-9f2b4 --config firebase.spark.json --non-interactive
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_FIREBASE_DEPLOY == 'true'
@@ -75,22 +76,20 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm --prefix functions ci
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - run: npm run build
         env:
           VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: classea-97dd2.firebaseapp.com
-          VITE_FIREBASE_PROJECT_ID: classea-97dd2
-          VITE_FIREBASE_STORAGE_BUCKET: classea-97dd2.firebasestorage.app
-          VITE_FIREBASE_MESSAGING_SENDER_ID: '433868872038'
-          VITE_FIREBASE_APP_ID: '1:433868872038:web:0761741d1a2d6c4a1010a7'
-          VITE_FIREBASE_MEASUREMENT_ID: G-SRWEMNMXG4
+          VITE_FIREBASE_AUTH_DOMAIN: barbeariaclassea-9f2b4.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: barbeariaclassea-9f2b4
+          VITE_FIREBASE_STORAGE_BUCKET: barbeariaclassea-9f2b4.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '714519979744'
+          VITE_FIREBASE_APP_ID: '1:714519979744:web:d5771be44fa016c9a81285'
+          VITE_FIREBASE_MEASUREMENT_ID: G-PKBWGQ92RF
           VITE_RECAPTCHA_ENTERPRISE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_KEY }}
           VITE_USE_EMULATORS: 'false'
-          VITE_SITE_URL: https://classea-97dd2.web.app
-      - run: npx firebase-tools deploy --only firestore,storage,functions,hosting --project classea-97dd2 --non-interactive
-        env:
-          SITE_URL: https://classea-97dd2.web.app
+          VITE_SPARK: 'true'
+          VITE_SITE_URL: https://barbeariaclassea-9f2b4.web.app
+      - run: npx firebase-tools deploy --config firebase.spark.json --only firestore,hosting --project barbeariaclassea-9f2b4 --non-interactive

@@ -11,7 +11,8 @@ import { toast } from '@/components/ui/Toast';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { errorMessage } from '@/lib/api';
 import { useServices } from '@/lib/catalog';
-import { loadFirestore, loadStorage } from '@/lib/firebase';
+import { loadFirestore } from '@/lib/firebase';
+import { uploadImage } from '@/lib/uploadImage';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useMyBarber } from './hooks';
 
@@ -55,13 +56,11 @@ export default function BarberProfilePage() {
   };
 
   const upload = async (file: File) => {
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 3 * 1024 * 1024) return toast.error('Envie JPG, PNG ou WebP de até 3 MB.');
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 3 * 1024 * 1024)
+      return toast.error('Envie JPG, PNG ou WebP de até 3 MB.');
     setUploading(true);
     try {
-      const { storage, ref, uploadBytes, getDownloadURL } = await loadStorage();
-      const r = ref(storage, `barbers/${b.id}/photo`);
-      await uploadBytes(r, file, { contentType: file.type });
-      const url = await getDownloadURL(r);
+      const url = await uploadImage(`barbers/${b.id}/photo`, file);
       const { db, doc, updateDoc } = await loadFirestore();
       await updateDoc(doc(db, `barbers/${b.id}`), { photoUrl: url });
       toast.success('Foto atualizada.');
@@ -80,21 +79,47 @@ export default function BarberProfilePage() {
           <Avatar name={b.displayName} src={b.photoUrl} size={80} />
           <div>
             <p className="font-label text-[24px] text-text-100">{b.displayName}</p>
-            <Button size="sm" variant="secondary" className="mt-2" loading={uploading} icon={<Camera className="size-4" strokeWidth={1.5} />} onClick={() => fileRef.current?.click()}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="mt-2"
+              loading={uploading}
+              icon={<Camera className="size-4" strokeWidth={1.5} />}
+              onClick={() => fileRef.current?.click()}
+            >
               Trocar foto
             </Button>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])}
+            />
           </div>
         </div>
         <div className="mt-6 space-y-4">
-          <Textarea label="Bio curta" value={bio} maxLength={240} onChange={(e) => setBio(e.target.value)} hint={`${bio.length}/240 · aparece no site`} />
+          <Textarea
+            label="Bio curta"
+            value={bio}
+            maxLength={240}
+            onChange={(e) => setBio(e.target.value)}
+            hint={`${bio.length}/240 · aparece no site`}
+          />
           <div>
             <p className="font-label mb-2 text-[12px] text-text-400">Especialidades</p>
             <div className="flex flex-wrap gap-2">
               {specialties.map((s) => (
-                <span key={s} className="inline-flex min-h-9 items-center gap-1 rounded-full border border-gold-700 bg-gold-500/10 pl-3 pr-1 text-[14px] text-gold-400">
+                <span
+                  key={s}
+                  className="inline-flex min-h-9 items-center gap-1 rounded-full border border-gold-700 bg-gold-500/10 pl-3 pr-1 text-[14px] text-gold-400"
+                >
                   {s}
-                  <button onClick={() => setSpecialties((l) => l.filter((x) => x !== s))} className="grid size-7 place-items-center rounded-full hover:bg-gold-500/20" aria-label={`Remover ${s}`}>
+                  <button
+                    onClick={() => setSpecialties((l) => l.filter((x) => x !== s))}
+                    className="grid size-7 place-items-center rounded-full hover:bg-gold-500/20"
+                    aria-label={`Remover ${s}`}
+                  >
                     <X className="size-3.5" />
                   </button>
                 </span>
@@ -109,7 +134,13 @@ export default function BarberProfilePage() {
                 setNewSpec('');
               }}
             >
-              <Input label="Nova especialidade" value={newSpec} onChange={(e) => setNewSpec(e.target.value)} wrapperClassName="flex-1" maxLength={30} />
+              <Input
+                label="Nova especialidade"
+                value={newSpec}
+                onChange={(e) => setNewSpec(e.target.value)}
+                wrapperClassName="flex-1"
+                maxLength={30}
+              />
               <Button type="submit" variant="secondary" className="h-14">
                 Adicionar
               </Button>
@@ -122,7 +153,9 @@ export default function BarberProfilePage() {
                 <Checkbox
                   key={s.id}
                   checked={serviceIds.includes(s.id)}
-                  onChange={(e) => setServiceIds((l) => (e.target.checked ? [...l, s.id] : l.filter((x) => x !== s.id)))}
+                  onChange={(e) =>
+                    setServiceIds((l) => (e.target.checked ? [...l, s.id] : l.filter((x) => x !== s.id)))
+                  }
                   label={s.name}
                 />
               ))}
@@ -133,7 +166,11 @@ export default function BarberProfilePage() {
           Salvar perfil
         </Button>
       </Card>
-      <Button variant="ghost" icon={<LogOut className="size-4" strokeWidth={1.5} />} onClick={() => void signOut().then(() => navigate('/barbeiro/login'))}>
+      <Button
+        variant="ghost"
+        icon={<LogOut className="size-4" strokeWidth={1.5} />}
+        onClick={() => void signOut().then(() => navigate('/barbeiro/login'))}
+      >
         Sair
       </Button>
     </div>

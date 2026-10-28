@@ -1,4 +1,4 @@
-import { loadFunctions } from './firebase';
+import { SPARK, loadFunctions } from './firebase';
 
 /** Error raised by our callables, with a friendly pt-BR message and a machine-readable reason. */
 export class ApiError extends Error {
@@ -20,6 +20,10 @@ const FALLBACK: Record<string, string> = {
 };
 
 export async function call<I, O>(name: string, input: I): Promise<O> {
+  if (SPARK) {
+    const { callSpark } = await import('./spark');
+    return callSpark<O>(name, JSON.parse(JSON.stringify(input ?? {})));
+  }
   const { fns, httpsCallable } = await loadFunctions();
   try {
     // The callable encoder turns undefined into null; drop empty keys so optional fields stay optional.
@@ -31,7 +35,8 @@ export async function call<I, O>(name: string, input: I): Promise<O> {
     const code = (err.code ?? 'internal').replace(/^functions\//, '');
     const reason = err.details?.reason ?? code;
     const message =
-      err.details?.message ?? (code === 'failed-precondition' || code === 'invalid-argument' ? err.message : undefined);
+      err.details?.message ??
+      (code === 'failed-precondition' || code === 'invalid-argument' ? err.message : undefined);
     throw new ApiError(message || FALLBACK[code] || FALLBACK.internal!, reason, code);
   }
 }

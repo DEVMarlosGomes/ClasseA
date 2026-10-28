@@ -1,9 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { User } from 'firebase/auth';
 import type { Role, UserProfile } from '@shared/types';
 import { useLiveDoc } from '@/hooks/useFirestore';
 import { call } from '@/lib/api';
-import { loadAuth } from '@/lib/firebase';
+import { SPARK, loadAuth, loadFirestore } from '@/lib/firebase';
 
 export interface CompleteProfileInput {
   name: string;
@@ -39,7 +48,8 @@ const AuthContext = createContext<AuthState | null>(null);
 
 function rolesFromClaims(claims: Record<string, unknown>): Role[] {
   const roles = claims.roles;
-  if (Array.isArray(roles)) return roles.filter((r): r is Role => r === 'client' || r === 'barber' || r === 'admin');
+  if (Array.isArray(roles))
+    return roles.filter((r): r is Role => r === 'client' || r === 'barber' || r === 'admin');
   return [];
 }
 
@@ -58,7 +68,10 @@ const AUTH_ERRORS: Record<string, string> = {
 
 export function authErrorMessage(e: unknown): string {
   const code = (e as { code?: string }).code ?? '';
-  return AUTH_ERRORS[code] ?? (e instanceof Error && !code ? e.message : 'Não foi possível entrar agora. Tente de novo.');
+  return (
+    AUTH_ERRORS[code] ??
+    (e instanceof Error && !code ? e.message : 'Não foi possível entrar agora. Tente de novo.')
+  );
 }
 
 export function AuthProvider({ children, eager = false }: { children: ReactNode; eager?: boolean }) {
@@ -94,12 +107,21 @@ export function AuthProvider({ children, eager = false }: { children: ReactNode;
   useEffect(() => {
     if (eager) return start();
     // Keep Auth out of the landing's critical path: restore the session once the page is idle.
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+    };
     if (w.requestIdleCallback) w.requestIdleCallback(start, { timeout: 2500 });
     else setTimeout(start, 1200);
   }, [eager, start]);
 
   const profileState = useLiveDoc<UserProfile & { id: string }>(user ? `users/${user.uid}` : null);
+  // Spark plan: no custom claims without the Admin SDK, so roles come from roles/{uid}.
+  const rolesDoc = useLiveDoc<{ roles?: unknown }>(SPARK && user ? `roles/${user.uid}` : null);
+  const effectiveRoles = useMemo(
+    () => (SPARK ? rolesFromClaims(rolesDoc.data ?? {}) : roles),
+    [roles, rolesDoc.data],
+  );
+  const rolesLoading = SPARK && !!user && rolesDoc.data === undefined && !rolesDoc.error;
 
   const refresh = useCallback(async () => {
     const { auth } = await loadAuth();
@@ -120,12 +142,12 @@ export function AuthProvider({ children, eager = false }: { children: ReactNode;
 
   const value = useMemo<AuthState>(
     () => ({
-      ready,
+      ready: ready && !rolesLoading,
       user,
-      roles,
+      roles: effectiveRoles,
       profilePending,
       profile: user ? profileState.data : null,
-      hasRole: (r) => roles.includes(r),
+      hasRole: (r) => effectiveRoles.includes(r),
       ensure: start,
       signIn: async (email, password) => {
         start();
@@ -136,7 +158,8 @@ export function AuthProvider({ children, eager = false }: { children: ReactNode;
         start();
         setProfilePending(true);
         try {
-          const { auth, createUserWithEmailAndPassword, sendEmailVerification, updateProfile } = await loadAuth();
+          const { auth, createUserWithEmailAndPassword, sendEmailVerification, updateProfile } =
+            await loadAuth();
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           await updateProfile(cred.user, { displayName: profile.name });
           await completeProfile(profile);
@@ -149,6 +172,11 @@ export function AuthProvider({ children, eager = false }: { children: ReactNode;
         start();
         const { auth, GoogleAuthProvider, signInWithPopup } = await loadAuth();
         const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+        if (SPARK) {
+          const { db, doc, getDoc } = await loadFirestore();
+          const snap = await getDoc(doc(db, `roles/${cred.user.uid}`));
+          return { needsProfile: rolesFromClaims(snap.data() ?? {}).length === 0 };
+        }
         const token = await cred.user.getIdTokenResult(true);
         return { needsProfile: rolesFromClaims(token.claims).length === 0 };
       },
@@ -167,7 +195,17 @@ export function AuthProvider({ children, eager = false }: { children: ReactNode;
       },
       refresh,
     }),
-    [ready, user, roles, profilePending, profileState.data, start, completeProfile, refresh],
+    [
+      ready,
+      rolesLoading,
+      user,
+      effectiveRoles,
+      profilePending,
+      profileState.data,
+      start,
+      completeProfile,
+      refresh,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

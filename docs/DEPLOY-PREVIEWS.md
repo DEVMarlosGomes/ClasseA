@@ -1,6 +1,6 @@
 # Deploy de testes na Vercel e Render
 
-Os dois serviços hospedam o front React/Vite. Authentication, Firestore, Storage e Functions continuam no projeto Firebase `classea-97dd2`.
+Os dois serviços hospedam o front React/Vite. Authentication e Firestore usam o projeto Firebase `barbeariaclassea-9f2b4`. Para testes no plano Spark, as operações que normalmente dependeriam de Functions rodam no navegador e as fotos de perfil são reduzidas e salvas no Firestore.
 
 ## Variáveis do build
 
@@ -16,6 +16,7 @@ Cadastre as variáveis abaixo nos dois provedores. Copie os valores do objeto `f
 | `VITE_FIREBASE_APP_ID`              | `appId`             |
 | `VITE_FIREBASE_MEASUREMENT_ID`      | `measurementId`     |
 | `VITE_USE_EMULATORS`                | `false`             |
+| `VITE_SPARK`                        | `true`              |
 
 Não cadastre `databaseURL`: o app usa Cloud Firestore. Não envie `FIREBASE_SERVICE_ACCOUNT` para a Vercel ou Render: o front não usa credenciais administrativas.
 
@@ -51,14 +52,14 @@ Depois que os dois endereços existirem:
 
 Quando configurar App Check, registre os mesmos domínios na chave reCAPTCHA Enterprise, adicione a site key como `VITE_RECAPTCHA_ENTERPRISE_KEY` nos dois provedores e faça novo deploy. Mantenha a imposição desativada até validar as métricas.
 
-## Backend necessário para o teste completo
+## Backend Spark necessário para os testes
 
 Antes de testar agendamento, cancelamento, pagamentos mock e administração:
 
 1. crie o Firestore Native em `southamerica-east1`;
-2. crie o Storage e habilite Authentication;
-3. migre o projeto para Blaze;
-4. implante regras, índices e Functions conforme o README;
-5. execute `npm run bootstrap:production` uma vez e cadastre o catálogo pelo painel administrativo.
+2. habilite Authentication com E-mail/senha e Google;
+3. execute `npm run deploy:spark` para publicar as regras de teste, os índices e o Hosting;
+4. execute `npm run bootstrap:production` uma vez para criar o primeiro administrador e o catálogo;
+5. mantenha `VITE_SPARK=true` na Vercel e na Render e faça um novo deploy.
 
-Sem essas etapas, a hospedagem abrirá a interface, mas operações dependentes do Firebase de produção falharão ou aparecerão sem dados.
+O modo Spark existe para homologação: sem um backend confiável, um cliente modificado pode falsificar disponibilidade, agendamentos e pagamentos simulados. Antes de atender clientes reais, migre para Blaze, desative `VITE_SPARK` e publique `firestore.rules`, Storage e Functions conforme o README.
