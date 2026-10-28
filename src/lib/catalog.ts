@@ -31,7 +31,11 @@ const DEFAULT_PLANS: Plan[] = SEED_PLANS.map((plan) => ({ ...plan }));
 export function useServices() {
   return useQuery({
     queryKey: ['services'],
-    queryFn: () => fetchActive<Service>('services', DEFAULT_SERVICES),
+    queryFn: async () => {
+      const remote = await fetchActive<Service>('services', DEFAULT_SERVICES);
+      const remoteIds = new Set(remote.map((service) => service.id));
+      return DEFAULT_SERVICES.every((service) => remoteIds.has(service.id)) ? remote : DEFAULT_SERVICES;
+    },
     staleTime: STALE,
     initialData: DEFAULT_SERVICES,
     initialDataUpdatedAt: 0,
@@ -64,7 +68,12 @@ export function useShopSettings() {
     queryFn: async (): Promise<ShopSettings> => {
       const { db, doc, getDoc } = await loadFirestoreLite();
       const snap = await getDoc(doc(db, 'settings/shop'));
-      return { ...DEFAULT_SETTINGS, ...(snap.data() as Partial<ShopSettings> | undefined) };
+      return {
+        ...DEFAULT_SETTINGS,
+        ...(snap.data() as Partial<ShopSettings> | undefined),
+        // The verified commercial address must not be replaced by an older settings document.
+        address: DEFAULT_SETTINGS.address,
+      };
     },
     staleTime: STALE,
     // Keep the public footer and contact information available when Firebase is

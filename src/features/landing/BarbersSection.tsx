@@ -1,4 +1,4 @@
-import { ArrowRight, Crown } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Barber } from '@shared/types';
 import { Reveal, RevealItem } from '@/components/Reveal';
@@ -19,7 +19,7 @@ export function BarbersSection() {
         <div className="px-4 sm:px-6">
           <SectionTitle id="barbeiros-title">Barbeiros</SectionTitle>
           <p className="mx-auto mt-4 max-w-[46ch] text-center text-[16px] text-text-400">
-            Cada um com sua especialidade. Escolha com quem você quer sentar na cadeira.
+            Todos realizam os serviços da casa. Escolha com quem você quer sentar na cadeira.
           </p>
         </div>
         {isError ? (
@@ -55,7 +55,7 @@ function BarberCard({ barber }: { barber: Barber }) {
   return (
     <Link
       to={`/agendar?barbeiro=${barber.id}`}
-      className={`group relative block overflow-hidden rounded-[20px] bg-ink-800 transition-[border-color,transform,box-shadow] duration-300 hover:border-gold-500/45 focus-visible:border-gold-500/45 ${barber.featured ? 'border border-gold-500/70 shadow-[0_24px_60px_-28px_rgba(233,181,66,0.75)] lg:-translate-y-3' : 'border border-gold-500/15'}`}
+      className="group relative block overflow-hidden rounded-[20px] border border-gold-500/15 bg-ink-800 transition-[border-color] duration-300 hover:border-gold-500/45 focus-visible:border-gold-500/45"
       aria-label={`Agendar com ${barber.displayName}`}
     >
       <div className="relative aspect-[4/5] overflow-hidden">
@@ -83,16 +83,7 @@ function BarberCard({ barber }: { barber: Barber }) {
         />
       </div>
       <div className="absolute inset-x-0 bottom-0 p-5">
-        {barber.roleLabel && (
-          <span className="font-label mb-3 inline-flex items-center gap-1.5 rounded-full bg-gold-500 px-3 py-1 text-[11px] uppercase tracking-[0.1em] text-ink-950">
-            <Crown className="size-3.5" strokeWidth={2} aria-hidden="true" />
-            {barber.roleLabel}
-          </span>
-        )}
         <h3 className="font-label text-[28px] leading-none text-text-100">{barber.displayName}</h3>
-        {barber.specialties.length > 0 && (
-          <p className="mt-2 text-[14px] text-text-400">{barber.specialties.join(' · ')}</p>
-        )}
         <span className="font-label mt-4 inline-flex min-h-11 items-center gap-1.5 text-[14px] text-gold-400">
           Agendar com {barber.displayName.split(' ')[0]}
           <ArrowRight
