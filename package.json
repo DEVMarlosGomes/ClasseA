@@ -19,7 +19,7 @@
     "emulators": "node scripts/emulators.mjs",
     "seed": "tsx scripts/seed.ts",
     "bootstrap:production": "tsx scripts/bootstrap-production.ts",
-    "deploy:spark": "npm run build && firebase deploy --config firebase.spark.json --only firestore,hosting --project barbeariaclassea-9f2b4",
+    "deploy:spark": "npm run build && firebase deploy --config firebase.spark.json --only firestore,hosting --project classea-97dd2",
     "assets": "node scripts/build-assets.mjs",
     "functions:build": "npm --prefix functions run build",
     "prepare": "husky",

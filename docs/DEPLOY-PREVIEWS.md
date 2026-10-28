@@ -1,6 +1,6 @@
 # Deploy de testes na Vercel e Render
 
-Os dois serviços hospedam o front React/Vite. Authentication e Firestore usam o projeto Firebase `barbeariaclassea-9f2b4`. Para testes no plano Spark, as operações que normalmente dependeriam de Functions rodam no navegador e as fotos de perfil são reduzidas e salvas no Firestore.
+Os dois serviços hospedam o front React/Vite. Authentication e Firestore usam o projeto Firebase `classea-97dd2`. Para testes no plano Spark, as operações que normalmente dependeriam de Functions rodam no navegador e as fotos de perfil são reduzidas e salvas no Firestore.
 
 ## Variáveis do build
 

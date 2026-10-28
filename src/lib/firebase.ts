@@ -12,7 +12,9 @@ export const USE_EMULATORS = env.VITE_USE_EMULATORS === 'true';
  * roles live in roles/{uid} instead of custom claims and photos are stored inline in Firestore.
  * Test environments only: firestore.spark.rules trusts signed-in clients far more than production.
  */
-export const SPARK = env.VITE_SPARK === 'true';
+export const SPARK =
+  env.VITE_SPARK === 'true' ||
+  (env.VITE_SPARK !== 'false' && env.VITE_FIREBASE_PROJECT_ID === 'classea-97dd2');
 export const FUNCTIONS_REGION = 'southamerica-east1';
 const EMULATOR_HOST = typeof location !== 'undefined' ? location.hostname : '127.0.0.1';
 

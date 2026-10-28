@@ -44,7 +44,7 @@ public/               marca, imagens, robots.txt e manifestos públicos
 
 ## Estado atual
 
-O código compila e usa o Firebase Emulator Suite no desenvolvimento. O app Web de produção já está registrado no projeto Firebase `barbeariaclassea-9f2b4`, e o Hosting padrão é `https://barbeariaclassea-9f2b4.web.app`.
+O código compila e usa o Firebase Emulator Suite no desenvolvimento. O app Web de produção já está registrado no projeto Firebase `classea-97dd2`, e o Hosting padrão é `https://classea-97dd2.web.app`.
 
 Previews públicos conectados à branch `main`:
 
@@ -66,7 +66,7 @@ Antes do deploy público ainda é obrigatório:
 7. configurar o envio real de e-mail. WhatsApp continua intencionalmente desativado até a escolha de um provedor;
 8. executar a lista de validação e só então liberar o Hosting de produção.
 
-O Realtime Database existente em `barbeariaclassea-9f2b4-default-rtdb` não é usado. A aplicação foi desenhada para Cloud Firestore.
+O Realtime Database existente em `classea-97dd2-default-rtdb` não é usado. A aplicação foi desenhada para Cloud Firestore.
 
 ## Desenvolvimento local
 
@@ -113,9 +113,9 @@ npm run test:e2e
 
 O projeto e o app Web já estão associados ao repositório:
 
-- projeto: `barbeariaclassea-9f2b4`;
+- projeto: `classea-97dd2`;
 - app Web: `Classe A Barbearia Web`;
-- Hosting: `barbeariaclassea-9f2b4.web.app`;
+- Hosting: `classea-97dd2.web.app`;
 - alias local: `prod` em `.firebaserc`.
 
 Siga esta ordem porque a região do Firestore não pode ser trocada depois da criação.
@@ -152,7 +152,7 @@ Em **Build > Authentication > Sign-in method**:
 
 - habilite **E-mail/senha**;
 - habilite **Google** e selecione o e-mail de suporte;
-- confira em **Settings > Authorized domains** se constam `localhost`, `barbeariaclassea-9f2b4.web.app`, `barbeariaclassea-9f2b4.firebaseapp.com` e o domínio próprio quando existir.
+- confira em **Settings > Authorized domains** se constam `localhost`, `classea-97dd2.web.app`, `classea-97dd2.firebaseapp.com` e o domínio próprio quando existir.
 
 Personalize o remetente e os modelos de verificação de e-mail e redefinição de senha antes do lançamento.
 
@@ -174,7 +174,7 @@ Autentique o CLI e selecione o alias:
 npx firebase-tools login
 npx firebase-tools use prod
 npm run check
-npx firebase-tools deploy --only firestore,storage,functions --project barbeariaclassea-9f2b4
+npx firebase-tools deploy --only firestore,storage,functions --project classea-97dd2
 ```
 
 As Functions usam Node.js 20 e região `southamerica-east1`. Se o deploy informar APIs desativadas, aceite a ativação ou habilite no Google Cloud Console: Cloud Functions, Cloud Build, Artifact Registry, Eventarc e Cloud Scheduler.
@@ -190,8 +190,8 @@ gcloud auth application-default login
 Execute uma única vez, trocando os dados:
 
 ```powershell
-$env:PRODUCTION_PROJECT_ID='barbeariaclassea-9f2b4'
-$env:BOOTSTRAP_CONFIRM='barbeariaclassea-9f2b4'
+$env:PRODUCTION_PROJECT_ID='classea-97dd2'
+$env:BOOTSTRAP_CONFIRM='classea-97dd2'
 $env:ADMIN_EMAIL='dono@seudominio.com.br'
 $env:ADMIN_NAME='Nome do proprietário'
 $env:ADMIN_PHONE='5511999999999'
@@ -214,7 +214,7 @@ Crie primeiro um canal temporário:
 
 ```bash
 npm run build
-npx firebase-tools hosting:channel:deploy homologacao --expires 7d --project barbeariaclassea-9f2b4
+npx firebase-tools hosting:channel:deploy homologacao --expires 7d --project classea-97dd2
 ```
 
 Valide em celular real: cadastro, login, agendamento, conflito de horário, cancelamento, plano mock, agenda do barbeiro, admin, cookies e exclusão de conta.
@@ -222,13 +222,13 @@ Valide em celular real: cadastro, login, agendamento, conflito de horário, canc
 Depois do aceite comercial e jurídico:
 
 ```bash
-npx firebase-tools deploy --only hosting --project barbeariaclassea-9f2b4
+npx firebase-tools deploy --only hosting --project classea-97dd2
 ```
 
 Para um deploy completo posterior:
 
 ```bash
-npx firebase-tools deploy --only firestore,storage,functions,hosting --project barbeariaclassea-9f2b4
+npx firebase-tools deploy --only firestore,storage,functions,hosting --project classea-97dd2
 ```
 
 ## GitHub Actions
