@@ -20,5 +20,6 @@ export {
   setDefaultPaymentMethod,
   subscribePlan,
 } from './payments';
+export { mpWebhook } from './payments/webhook';
 export { acceptLegalVersions, completeProfile, deleteMyAccount, exportMyData, setMarketingConsent } from './account';
 export { appointmentReminders, dailySubscriptions } from './scheduled';

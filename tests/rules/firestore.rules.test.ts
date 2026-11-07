@@ -89,6 +89,15 @@ describe('administrator', () => {
     await assertFails(getDocs(query(collectionGroup(client, 'clients'))));
   });
 
+  it('only the owner reads the payment notification log, and nobody writes it', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'webhookEvents/e1'), { type: 'payment', result: 'approved' }));
+    const owner = env.authenticatedContext('owner', { roles: ['admin'] }).firestore();
+    await assertSucceeds(getDoc(doc(owner, 'webhookEvents/e1')));
+    await assertFails(setDoc(doc(owner, 'webhookEvents/e2'), { type: 'payment' }));
+    const barber = env.authenticatedContext('barber-a', { roles: ['barber'] }).firestore();
+    await assertFails(getDoc(doc(barber, 'webhookEvents/e1')));
+  });
+
   it("edits another barber's day only with its own uid as updatedBy", async () => {
     const db = env.authenticatedContext('owner', { roles: ['admin', 'barber'] }).firestore();
     const day = { status: 'closed', blocks: [], extraOpenings: [], updatedAt: serverTimestamp() };

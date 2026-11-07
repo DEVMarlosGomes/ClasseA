@@ -4,8 +4,9 @@ import { SHOP_TZ } from '../../shared/time';
 import { REGION, Timestamp, db } from './lib/admin';
 import { notifyUser } from './notify';
 import { processSubscriptions } from './payments';
+import { GATEWAY_SECRETS } from './payments/provider';
 
-export const dailySubscriptions = onSchedule({ schedule: '5 0 * * *', timeZone: SHOP_TZ, region: REGION }, async () => {
+export const dailySubscriptions = onSchedule({ schedule: '5 0 * * *', timeZone: SHOP_TZ, region: REGION, secrets: GATEWAY_SECRETS }, async () => {
   const stats = await processSubscriptions();
   logger.info('subscriptions processed', stats);
 });

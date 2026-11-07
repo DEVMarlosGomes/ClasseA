@@ -1,4 +1,5 @@
 import { type CallableRequest, HttpsError, onCall } from 'firebase-functions/v2/https';
+import type { SecretParam } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
 import type { ZodType, ZodTypeDef } from 'zod';
 import type { Role } from '../../../shared/types';
@@ -16,6 +17,8 @@ interface Options {
   roles?: Role[];
   /** Allow calls without a signed-in user. */
   public?: boolean;
+  /** Secrets this function may read (e.g. the payment gateway token). */
+  secrets?: SecretParam[];
 }
 
 /** Friendly, typed failure. `reason` lets the UI react (e.g. slot-taken sends the user back to step 4). */
@@ -47,7 +50,7 @@ export function callable<I, O>(
   // ENFORCE_APP_CHECK=true in the Functions runtime and deploying again.
   const enforceAppCheck = !IS_EMULATOR && process.env.ENFORCE_APP_CHECK === 'true';
   return onCall(
-    { region: REGION, enforceAppCheck, cors: true, memory: '256MiB', timeoutSeconds: 30 },
+    { region: REGION, enforceAppCheck, cors: true, memory: '256MiB', timeoutSeconds: 30, secrets: options.secrets ?? [] },
     async (req) => {
       if (!req.auth && !options.public)
         fail('permission-denied', 'unauthenticated', 'Entre na sua conta para continuar.');

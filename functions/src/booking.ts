@@ -22,7 +22,7 @@ import { FieldValue, Timestamp, db } from './lib/admin';
 import { type Caller, callable, fail } from './lib/callable';
 import { findActiveSubscription, getBarber, getProfile, getServices, getSettings } from './lib/data';
 import { notifyUser } from './notify';
-import { gateway } from './payments/gateway';
+import { GATEWAY_SECRETS, PROVIDER, gateway } from './payments/provider';
 
 const LOCK_STEP = 15;
 
@@ -197,6 +197,9 @@ export const createAppointment = callable(createAppointmentSchema, async (input,
   // Card: charge before the transaction; refund if the slot is lost.
   let paymentId: string | null = null;
   let chargeRef: string | null = null;
+  if (input.paymentMode === 'card_mock' && PROVIDER === 'mercadopago') {
+    fail('failed-precondition', 'card-unavailable', 'Pagamento com cartão pelo app ainda não está disponível. Use PIX ou pague na barbearia.');
+  }
   if (input.paymentMode === 'card_mock') {
     const pmSnap = input.paymentMethodId
       ? await db.doc(`users/${caller.uid}/paymentMethods/${input.paymentMethodId}`).get()
@@ -302,7 +305,7 @@ export const createAppointment = callable(createAppointmentSchema, async (input,
     '/cliente/agendamentos',
   );
   return { id: ref.id, barberId: barber.id, barberName: barber.displayName, date: input.date, start: input.start, end };
-});
+}, { secrets: GATEWAY_SECRETS });
 
 /** Cancels inside a transaction: deletes its locks and returns plan usage (all reads before writes). */
 async function cancelInTx(
@@ -340,7 +343,7 @@ async function refundCard(appt: Appointment) {
   if (!appt.paymentId) return;
   const pay = await db.doc(`payments/${appt.paymentId}`).get();
   if (pay.get('status') !== 'approved') return;
-  await gateway.refund({ gatewayRef: pay.get('gatewayRef'), amountCents: pay.get('amountCents') });
+  await gateway.refund({ gatewayRef: pay.get('gatewayRef'), amountCents: pay.get('amountCents'), idempotencyKey: `refund-${pay.id}` });
   await pay.ref.update({ status: 'refunded' });
 }
 
@@ -369,7 +372,7 @@ export const cancelAppointment = callable(cancelAppointmentSchema, async ({ id, 
   await refundCard(appt);
   await recomputeAvailability(appt.barberId, appt.date);
   return { ok: true };
-});
+}, { secrets: GATEWAY_SECRETS });
 
 export const rescheduleAppointment = callable(rescheduleAppointmentSchema, async ({ id, newSlot }, caller) => {
   const settings = await getSettings();
@@ -463,7 +466,7 @@ export const barberUpdateAppointmentStatus = callable(
     await ref.update({ status, statusUpdatedAt: FieldValue.serverTimestamp() });
     return { ok: true };
   },
-  { roles: ['barber', 'admin'] },
+  { roles: ['barber', 'admin'], secrets: GATEWAY_SECRETS },
 );
 
 export { OCCUPYING };

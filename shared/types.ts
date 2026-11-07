@@ -177,6 +177,9 @@ export interface Subscription {
   cutsPerMonth: number | null;
   usage: { cycle: string; cutsUsed: number };
   cancelledAt?: TimestampLike | null;
+  /** Mercado Pago preapproval id when the gateway (not our scheduler) charges the renewals. */
+  gatewayRef?: string | null;
+  lastPaymentId?: string | null;
 }
 
 export type PaymentStatus = 'approved' | 'declined' | 'refunded' | 'pending';
@@ -187,7 +190,8 @@ export interface Payment {
   subscriptionId?: string | null;
   appointmentId?: string | null;
   amountCents: number;
-  method: 'card_mock' | 'pix_mock';
+  /** *_mock = simulated; card/pix = real (Mercado Pago). */
+  method: 'card_mock' | 'pix_mock' | 'card' | 'pix';
   status: PaymentStatus;
   description: string;
   gatewayRef: string;

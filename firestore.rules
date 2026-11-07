@@ -148,6 +148,11 @@ service cloud.firestore {
       allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isAdmin();
       allow write: if false;
     }
+    // Mercado Pago notification log (ids and outcomes only). Written by the mpWebhook function.
+    match /webhookEvents/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
     match /pixCharges/{id} {
       allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isAdmin();
       allow write: if false;

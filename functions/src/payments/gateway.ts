@@ -30,15 +30,59 @@ export type ChargeResult =
 export interface PixCharge {
   gatewayRef: string;
   payload: string;
+  /** PNG/JPEG QR image as base64 when the gateway provides one (Mercado Pago does). */
+  qrBase64?: string | null;
   expiresAt: Date;
 }
 
+/** Recurring charge kept by the gateway (Mercado Pago preapproval). */
+export interface GatewaySubscription {
+  gatewayRef: string;
+  /** Raw gateway status; map it with mpStatus.mapPreapprovalStatus. */
+  status: string;
+  externalReference: string | null;
+  nextPaymentDate: Date | null;
+}
+
+/** One installment of a recurring charge (Mercado Pago authorized payment). */
+export interface GatewayInstallment {
+  id: string;
+  subscriptionRef: string;
+  status: string;
+  paymentId: string | null;
+  paymentStatus: string | null;
+  amountCents: number;
+}
+
+export interface GatewayPayment {
+  id: string;
+  status: string;
+  amountCents: number;
+  externalReference: string | null;
+}
+
 export interface PaymentGateway {
+  /** "mock" keeps the demo flows (test cards, simulated PIX); "mercadopago" moves real money. */
+  readonly provider: 'mock' | 'mercadopago';
   tokenizeCard(card: CardInput): Promise<TokenizedCard>;
   charge(input: { token: string; amountCents: number; description: string }): Promise<ChargeResult>;
-  refund(input: { gatewayRef: string; amountCents: number }): Promise<{ status: 'refunded'; gatewayRef: string }>;
-  createPix(input: { amountCents: number; description: string }): Promise<PixCharge>;
+  /** Full refund. `idempotencyKey` makes retries safe (Mercado Pago requires it). */
+  refund(input: { gatewayRef: string; amountCents: number; idempotencyKey?: string }): Promise<{ status: 'refunded'; gatewayRef: string }>;
+  createPix(input: { amountCents: number; description: string; externalReference?: string; payerEmail?: string }): Promise<PixCharge>;
   getPixStatus(gatewayRef: string): Promise<'pending' | 'approved' | 'expired'>;
+  createSubscription(input: {
+    externalReference: string;
+    reason: string;
+    payerEmail: string;
+    cardToken: string;
+    amountCents: number;
+    frequencyMonths: number;
+  }): Promise<GatewaySubscription>;
+  /** Cancel, or change amount/card for the next charges. */
+  updateSubscription(gatewayRef: string, change: { cancel?: boolean; amountCents?: number; cardToken?: string }): Promise<GatewaySubscription>;
+  getSubscription(gatewayRef: string): Promise<GatewaySubscription>;
+  getInstallment(id: string): Promise<GatewayInstallment>;
+  getPayment(id: string): Promise<GatewayPayment>;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -59,6 +103,7 @@ function emv(id: string, value: string): string {
 }
 
 export class MockPaymentGateway implements PaymentGateway {
+  readonly provider = 'mock' as const;
   async tokenizeCard(card: CardInput): Promise<TokenizedCard> {
     await sleep(latency());
     const digits = onlyDigits(card.number);
@@ -102,6 +147,25 @@ export class MockPaymentGateway implements PaymentGateway {
     // The mock never settles by itself: the user taps "Simular pagamento aprovado" (confirmMockPix).
     return 'pending';
   }
-}
 
-export const gateway: PaymentGateway = new MockPaymentGateway();
+  // The mock keeps renewing through processSubscriptions + charge(), so these only echo the input.
+  async createSubscription(input: { externalReference: string }): Promise<GatewaySubscription> {
+    return { gatewayRef: randomId('MOCK-SUB-'), status: 'authorized', externalReference: input.externalReference, nextPaymentDate: null };
+  }
+
+  async updateSubscription(gatewayRef: string, change: { cancel?: boolean }): Promise<GatewaySubscription> {
+    return { gatewayRef, status: change.cancel ? 'cancelled' : 'authorized', externalReference: null, nextPaymentDate: null };
+  }
+
+  async getSubscription(gatewayRef: string): Promise<GatewaySubscription> {
+    return { gatewayRef, status: 'authorized', externalReference: null, nextPaymentDate: null };
+  }
+
+  async getInstallment(id: string): Promise<GatewayInstallment> {
+    return { id, subscriptionRef: '', status: 'processed', paymentId: null, paymentStatus: null, amountCents: 0 };
+  }
+
+  async getPayment(id: string): Promise<GatewayPayment> {
+    return { id, status: 'pending', amountCents: 0, externalReference: null };
+  }
+}

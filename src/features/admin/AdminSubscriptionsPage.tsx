@@ -142,7 +142,7 @@ export default function AdminSubscriptionsPage() {
                     <div className="min-w-0">
                       <p className="font-bold text-text-100">{clientLabel(p.clientId)}</p>
                       <p className="mt-1 text-[13px] text-text-400">
-                        {p.description} · {p.method === 'pix_mock' ? 'PIX' : 'Cartão'}
+                        {p.description} · {p.method === 'pix_mock' || p.method === 'pix' ? 'PIX' : 'Cartão'}
                       </p>
                       <p className="mt-1 break-all text-[12px] text-text-400">
                         {formatInstant(p.createdAt.toDate())} · {p.gatewayRef}

@@ -124,6 +124,8 @@ export const subscribePlanSchema = z.object({
   method: z.enum(['card_mock', 'pix_mock']),
   paymentMethodId: z.string().nullish(),
   pixChargeId: z.string().nullish(),
+  /** Mercado Pago single-use card token (Card Payment Brick); the card number never reaches us. */
+  cardToken: z.string().min(8).max(200).nullish(),
 });
 
 export const changePlanSchema = z.object({ planId: z.string().min(1) });

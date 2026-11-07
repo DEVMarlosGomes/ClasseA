@@ -163,6 +163,30 @@ As **anotações privadas** dos barbeiros sobre clientes (`privateNotes`) hoje s
   - regra `/{path=**}/clients/{id}` só para admin; seed com Igor `barber + admin`.
   - **Pendente em produção:** o barbeiro `igor-gabriel` de `PUBLIC_BARBERS` tem id fixo, não o uid da conta do Igor. Para a área do barbeiro e o painel funcionarem com a conta real, o documento `barbers/{uid}` precisa usar o uid dele, e `roles/{uid}` precisa ter `['barber', 'admin']`.
 
+- **Fase 2a (2026-11-07):** backend pronto, **desligado por padrão** (`PAYMENTS_PROVIDER` ausente = mock):
+  - SDK oficial `mercadopago` 3.6.1 nas Functions; gateway em `functions/src/payments/mercadopago.ts`;
+  - assinatura recorrente (`/preapproval`, cartão tokenizado no navegador), troca de valor, cancelamento, estorno em 7 dias;
+  - PIX real (`/v1/payments`, `payment_method_id: "pix"`) com `external_reference` = id da cobrança;
+  - webhook `mpWebhook`: valida `x-signature` com o validador do SDK, reconsulta o recurso na API, idempotente, log em `webhookEvents`;
+  - reconciliação diária: assinatura cancelada no MP sem webhook é encerrada; carência de 10 dias (janela de retentativa do MP);
+  - com o MP ligado, cartão no agendamento avulso fica indisponível até a fase 2b (o cliente usa PIX ou paga na barbearia).
+- **Fase 2b (a fazer):** front-end — Card Payment Brick no lugar do `CardForm`, QR real no `PixPanel`, esconder cartão no agendamento, renomear `card_mock`/`pix_mock` na API.
+
+### Como ligar no sandbox (depois do Blaze)
+
+1. Mercado Pago → Suas integrações → criar aplicação → **credenciais de teste** (`TEST-...`).
+2. `firebase functions:secrets:set MP_ACCESS_TOKEN --project classea-97dd2` (token de teste).
+3. Copiar `functions/.env.example` para `functions/.env.classea-97dd2` com `PAYMENTS_PROVIDER=mercadopago` e `MP_WEBHOOK_URL`.
+4. Publicar as Functions; no painel do MP, em Webhooks, cadastrar a URL do `mpWebhook` com os tópicos `payment`, `subscription_preapproval` e `subscription_authorized_payment`; revelar a chave e salvar com `firebase functions:secrets:set MP_WEBHOOK_SECRET`; publicar de novo.
+5. Testar com usuários e cartões de teste do MP.
+
+### Conferir no sandbox (não confirmado na documentação)
+
+- Se o painel de Webhooks entrega eventos de **assinaturas** (a doc diz que esse método "não está disponível" para Assinaturas, mas lista os tópicos). Se não entregar, a reconciliação diária cobre o atraso, e dá para consultar `/authorized_payments/search` no agendamento.
+- Lista completa de status de `preapproval` e de `authorized_payments` (valores desconhecidos são ignorados, não adivinhados).
+- Formato aceito em `date_of_expiration` do PIX e se `/v1/payments` com `payment_method_id: "pix"` segue aceito (a doc nova mostra PIX pela API de Orders).
+- Se `data.id` da assinatura do webhook precisa ir em minúsculas (o SDK oficial não converte; seguimos o SDK).
+
 ## 9. Testes
 
 - Unitário: mapeamento de status MP → nosso; validação de `x-signature` (casos válido, adulterado, `ts` antigo).
