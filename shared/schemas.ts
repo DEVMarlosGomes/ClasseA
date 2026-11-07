@@ -63,7 +63,7 @@ export const signInSchema = z.object({
   password: z.string().min(1, 'Informe a senha'),
 });
 
-export const paymentModeSchema = z.enum(['plan', 'pay_at_shop', 'card_mock', 'pix_mock']);
+export const paymentModeSchema = z.enum(['plan', 'pay_at_shop', 'card_mock', 'pix_mock', 'online']);
 
 export const getAvailableSlotsSchema = z.object({
   barberId: z.string().min(1),
@@ -173,6 +173,15 @@ export const settleAppointmentSchema = z.object({
   /** What was actually received at the counter, in cents. */
   receivedCents: z.number().int().min(0).max(10_000_00),
 });
+
+/** What InfinitePay sends back on the redirect_url (and in the webhook). */
+export const confirmOnlinePaymentSchema = z.object({
+  orderNsu: z.string().min(1).max(64),
+  transactionNsu: z.string().min(1).max(128),
+  slug: z.string().min(1).max(128),
+});
+
+export const markRefundedSchema = z.object({ paymentId: z.string().min(1) });
 
 export const deleteMyAccountSchema = z.object({ confirmation: z.literal('EXCLUIR') });
 

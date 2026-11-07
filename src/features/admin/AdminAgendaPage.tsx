@@ -16,6 +16,8 @@ const STATUS: Record<AppointmentStatus, { label: string; tone: 'gold' | 'success
   no_show: { label: 'Não compareceu', tone: 'danger' },
   cancelled_by_client: { label: 'Cancelado pelo cliente', tone: 'neutral' },
   cancelled_by_barber: { label: 'Cancelado pela equipe', tone: 'neutral' },
+  pending_payment: { label: 'Aguardando pagamento', tone: 'gold' },
+  payment_expired: { label: 'Pagamento não concluído', tone: 'neutral' },
 };
 
 export default function AdminAgendaPage() {

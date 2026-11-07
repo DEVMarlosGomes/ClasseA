@@ -52,8 +52,13 @@ export const settleAppointment = callable(
             }
           : null;
       const onlineCents = onlinePaidCents(appt);
-      // Online payments are still simulated (mock): no platform fee until InfinitePay is live.
-      const online = onlineCents > 0 ? { platform: 'none' as const, receivedCents: onlineCents, feeCents: 0 } : null;
+      // InfinitePay (real) carries its fee; simulated payments (*_mock) have none.
+      const online =
+        onlineCents <= 0
+          ? null
+          : appt.paymentMode === 'online'
+            ? { platform: 'infinitepay' as const, receivedCents: onlineCents, feeCents: estimateFee(settings, 'infinitepay', appt.onlineMethod ?? 'credit', onlineCents) }
+            : { platform: 'none' as const, receivedCents: onlineCents, feeCents: 0 };
       const covered = planCoveredCents(appt);
 
       const pct = commissionPctFor(barber, settings);

@@ -134,6 +134,12 @@ export default function BookingPage() {
         pixChargeId: b.paymentMode === 'pix_mock' ? b.pixChargeId : undefined,
         notes: b.notes || undefined,
       });
+      if (result.checkoutUrl) {
+        // The slot is held; the client pays on InfinitePay's page and comes back to /agendar/retorno.
+        b.reset();
+        window.location.assign(result.checkoutUrl);
+        return;
+      }
       b.finish(result);
     } catch (e) {
       if (e instanceof ApiError && e.reason === 'slot-taken') b.slotTaken();

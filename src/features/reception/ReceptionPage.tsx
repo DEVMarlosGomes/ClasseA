@@ -34,6 +34,8 @@ function badgeFor(a: Appointment): { label: string; tone: Tone } {
   if (a.settlement) return { label: 'Pago', tone: 'success' };
   if (a.status === 'no_show') return { label: 'Não concluído', tone: 'danger' };
   if (a.status === 'cancelled_by_client' || a.status === 'cancelled_by_barber') return { label: 'Cancelado', tone: 'neutral' };
+  if (a.status === 'pending_payment') return { label: 'Aguardando pagamento online', tone: 'gold' };
+  if (a.status === 'payment_expired') return { label: 'Pagamento não concluído', tone: 'neutral' };
   if (a.status === 'completed') return { label: 'Aguardando baixa', tone: 'gold' };
   return { label: 'Confirmado', tone: 'gold' };
 }

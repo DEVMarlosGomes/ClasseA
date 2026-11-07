@@ -166,6 +166,22 @@ O F1 fica **antes** dos gateways de propósito: a baixa na barbearia e as comiss
   - regras: `commissions` e `payouts` por barbeiro, `settings/finance` restrito, e no Spark o barbeiro não lê mais todos os `payments`.
 - **Para ir ao ar no Spark:** publicar as regras (`firebase deploy --config firebase.spark.json --only firestore:rules --project classea-97dd2`), fazer push para a Vercel, criar o acesso da recepção pelo painel e pôr **0%** no Igor em Financeiro → Regras.
 
+- **F2 + F3 implementadas (2026-11-07), só no modo Functions** (no Spark o pagamento online fica bloqueado no servidor e escondido na tela):
+  - "Pagar agora online" no agendamento → horário reservado (`pending_payment`) por 20 min → página da InfinitePay → `/agendar/retorno`;
+  - confirmação só por `/payment_check` (retorno e webhook `ipWebhook`), idempotente pelo `transaction_nsu`, conferindo o valor;
+  - `expireOnlineHolds` (a cada 5 min) libera reservas não pagas; pagamento que chega depois vira "estorno pendente";
+  - cancelamento de atendimento pago online → "estorno pendente"; o Igor estorna no app da InfinitePay e clica "Já estornei" no Financeiro;
+  - a baixa de atendimento pago online usa a taxa da tabela da InfinitePay (PIX/crédito).
+  - **Ainda não:** plano semestral/anual à vista pela InfinitePay (por enquanto, só atendimentos).
+
+### O que é preciso da InfinitePay
+
+1. App InfinitePay → Configurações do Checkout → **"Habilitar checkout integrado"**.
+2. Criar a **API key** (`inchk_...`, aparece uma vez só) e anotar a **InfiniteTag** (sem o `$`).
+3. Nas Functions: `firebase functions:secrets:set INFINITEPAY_API_KEY` e, em `functions/.env.classea-97dd2`, `ONLINE_PAYMENTS=infinitepay`, `INFINITEPAY_HANDLE`, `SITE_URL` e `IP_WEBHOOK_URL`.
+4. No front (sem Spark): `VITE_ONLINE_PAYMENTS=infinitepay`.
+5. Teste real de R$ 1,00 (criar um serviço de teste com esse preço), conferir a confirmação e estornar no app.
+
 ## 7. Pendências de decisão (resolvidas em 2026-11-07, ver Andamento)
 
 1. **Comissão de atendimento coberto por plano.** O plano não tem "valor recebido" por corte. Opções:

@@ -13,6 +13,7 @@ const PAYMENT_LABEL = {
   pay_at_shop: 'Pagar na barbearia',
   card_mock: 'Cartão (simulado)',
   pix_mock: 'PIX (simulado, aprovado)',
+  online: 'Online — PIX ou cartão (InfinitePay)',
 } as const;
 
 function Line({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {

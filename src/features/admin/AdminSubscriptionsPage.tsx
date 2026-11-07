@@ -24,6 +24,7 @@ const PAY_STATUS: Record<PaymentStatus, { label: string; tone: Tone }> = {
   declined: { label: 'Recusada', tone: 'danger' },
   refunded: { label: 'Estornada', tone: 'neutral' },
   pending: { label: 'Aguardando', tone: 'gold' },
+  refund_pending: { label: 'Estorno pendente', tone: 'danger' },
 };
 
 // Overdue first, then active, then the closed ones.

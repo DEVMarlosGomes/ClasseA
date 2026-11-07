@@ -245,6 +245,10 @@ async function resolveBarber(
 const brDate = (date: string) => date.split('-').reverse().join('/');
 
 export const createAppointment = handler(createAppointmentSchema, async (input, caller) => {
+  // Real online payments need the server (API key, trusted confirmation): never in the Spark test mode.
+  if (input.paymentMode === 'online') {
+    fail('failed-precondition', 'online-unavailable', 'Pagamento online ainda não está disponível. Escolha pagar na barbearia.');
+  }
   const {
     db,
     doc,

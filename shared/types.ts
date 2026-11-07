@@ -104,9 +104,18 @@ export interface Service {
 }
 
 export type AppointmentStatus =
-  'confirmed' | 'completed' | 'no_show' | 'cancelled_by_client' | 'cancelled_by_barber';
+  | 'confirmed'
+  | 'completed'
+  | 'no_show'
+  | 'cancelled_by_client'
+  | 'cancelled_by_barber'
+  /** Online payment started: the slot is held until paymentHoldUntil. */
+  | 'pending_payment'
+  /** The hold ran out without a confirmed payment; the slot was released. */
+  | 'payment_expired';
 
-export type PaymentMode = 'plan' | 'pay_at_shop' | 'card_mock' | 'pix_mock';
+/** online = InfinitePay checkout (PIX or card on their page). *_mock = simulated. */
+export type PaymentMode = 'plan' | 'pay_at_shop' | 'card_mock' | 'pix_mock' | 'online';
 
 export interface AppointmentService {
   id: string;
@@ -143,6 +152,11 @@ export interface Appointment {
   reminders?: { h24?: boolean; h2?: boolean };
   /** "Baixa": what was actually received. Written only by settleAppointment. */
   settlement?: Settlement | null;
+  /** InfinitePay checkout link while the payment is pending. */
+  checkoutUrl?: string | null;
+  paymentHoldUntil?: TimestampLike | null;
+  /** How the online payment was made (InfinitePay capture method), for the fee estimate. */
+  onlineMethod?: 'pix' | 'credit' | null;
   /** Closed as not completed (e.g. client did not come), with the reason. */
   closure?: Closure | null;
 }
@@ -188,7 +202,8 @@ export interface Subscription {
   lastPaymentId?: string | null;
 }
 
-export type PaymentStatus = 'approved' | 'declined' | 'refunded' | 'pending';
+/** refund_pending: must be refunded by hand in the InfinitePay app (no refund API). */
+export type PaymentStatus = 'approved' | 'declined' | 'refunded' | 'pending' | 'refund_pending';
 
 export interface Payment {
   id: string;

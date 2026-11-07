@@ -9,6 +9,7 @@ export {
 export { onBarberDayWrite, onBarberWrite } from './availability';
 export { onAppointmentWrite, createBarber, createReception, setUserRole } from './staff';
 export { settleAppointment } from './finance';
+export { confirmOnlinePayment, expireOnlineHolds, ipWebhook, markPaymentRefunded } from './payments/onlineCheckout';
 export {
   addPaymentMethod,
   cancelSubscription,

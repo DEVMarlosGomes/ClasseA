@@ -50,7 +50,13 @@ export const settleAppointment = handler(
           ? { method: input.method, platform, receivedCents: input.receivedCents, feeCents: estimateFee(settings, platform, input.method, input.receivedCents) }
           : null;
       const onlineCents = onlinePaidCents(appt);
-      const online = onlineCents > 0 ? { platform: 'none' as const, receivedCents: onlineCents, feeCents: 0 } : null;
+      // InfinitePay (real) carries its fee; simulated payments (*_mock) have none.
+      const online =
+        onlineCents <= 0
+          ? null
+          : appt.paymentMode === 'online'
+            ? { platform: 'infinitepay' as const, receivedCents: onlineCents, feeCents: estimateFee(settings, 'infinitepay', appt.onlineMethod ?? 'credit', onlineCents) }
+            : { platform: 'none' as const, receivedCents: onlineCents, feeCents: 0 };
       const covered = planCoveredCents(appt);
       const calc = computeCommission({ shop, online, planCoveredCents: covered }, commissionPctFor(barber, settings), settings);
 

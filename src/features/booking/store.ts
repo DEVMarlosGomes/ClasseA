@@ -12,6 +12,8 @@ export interface BookingResult {
   date: string;
   start: string;
   end: string;
+  /** InfinitePay page to pay a held slot (online payment). */
+  checkoutUrl?: string | null;
 }
 
 interface BookingState {

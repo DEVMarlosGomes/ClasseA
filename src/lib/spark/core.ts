@@ -137,7 +137,8 @@ export function randomId(prefix: string, len = 10): string {
 // ---------- availability ----------
 
 /** Statuses that keep a slot occupied. */
-export const OCCUPYING: AppointmentStatus[] = ['confirmed', 'completed', 'no_show'];
+// pending_payment holds the slot while the client pays online.
+export const OCCUPYING: AppointmentStatus[] = ['confirmed', 'completed', 'no_show', 'pending_payment'];
 
 /**
  * Clients cannot read other people's appointments, so the occupied ranges of each barber/day are

@@ -1,4 +1,4 @@
-import { Check, CreditCard, Crown, Plus, QrCode, Store } from 'lucide-react';
+import { Check, CreditCard, Crown, Plus, QrCode, ShieldCheck, Store } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { BRAND_LABEL } from '@shared/cards';
 import { formatBRL } from '@shared/money';
@@ -7,6 +7,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/components/ui/Toast';
 import { cn } from '@/lib/cn';
+import { ONLINE_PAYMENTS } from '@/lib/payments';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { CardForm } from '@/features/payments/CardForm';
 import { DemoNotice } from '@/features/payments/DemoNotice';
@@ -31,16 +32,38 @@ function Option({
   children?: ReactNode;
 }) {
   return (
-    <div className={cn('rounded-[18px] border transition-colors duration-150', selected ? 'border-gold-500 bg-gold-500/[0.07]' : 'border-ink-600 bg-ink-800/70')}>
-      <button type="button" role="radio" aria-checked={selected} onClick={onClick} className="flex w-full items-center gap-4 p-4 text-left">
-        <span className={cn('grid size-11 shrink-0 place-items-center rounded-full', selected ? 'bg-gold-500 text-ink-950' : 'bg-ink-700 text-gold-500')}>
+    <div
+      className={cn(
+        'rounded-[18px] border transition-colors duration-150',
+        selected ? 'border-gold-500 bg-gold-500/[0.07]' : 'border-ink-600 bg-ink-800/70',
+      )}
+    >
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        onClick={onClick}
+        className="flex w-full items-center gap-4 p-4 text-left"
+      >
+        <span
+          className={cn(
+            'grid size-11 shrink-0 place-items-center rounded-full',
+            selected ? 'bg-gold-500 text-ink-950' : 'bg-ink-700 text-gold-500',
+          )}
+        >
           {icon}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-bold text-text-100">{title}</span>
           <span className="block text-[14px] text-text-400">{description}</span>
         </span>
-        <span aria-hidden="true" className={cn('grid size-6 place-items-center rounded-full border', selected ? 'border-transparent bg-gold-500 text-ink-950' : 'border-ink-600')}>
+        <span
+          aria-hidden="true"
+          className={cn(
+            'grid size-6 place-items-center rounded-full border',
+            selected ? 'border-transparent bg-gold-500 text-ink-950' : 'border-ink-600',
+          )}
+        >
           {selected && <Check className="size-4" strokeWidth={2.5} />}
         </span>
       </button>
@@ -77,8 +100,11 @@ export function PaymentStep() {
           title="Usar meu plano"
           description={
             <>
-              {usage?.remaining != null ? `Restam ${usage.remaining} de ${usage.total} neste ciclo` : 'Uso ilimitado neste ciclo'}
-              {dueWithPlanCents > 0 && ` · ${formatBRL(dueWithPlanCents)} na barbearia pelos serviços não inclusos`}
+              {usage?.remaining != null
+                ? `Restam ${usage.remaining} de ${usage.total} neste ciclo`
+                : 'Uso ilimitado neste ciclo'}
+              {dueWithPlanCents > 0 &&
+                ` · ${formatBRL(dueWithPlanCents)} na barbearia pelos serviços não inclusos`}
             </>
           }
         />
@@ -90,65 +116,88 @@ export function PaymentStep() {
         title="Pagar na barbearia"
         description={`${formatBRL(totalCents)} no dia, em dinheiro, cartão ou PIX`}
       />
-      <Option
-        selected={paymentMode === 'card_mock'}
-        onClick={() => choose('card_mock')}
-        icon={<CreditCard className="size-5" strokeWidth={1.5} />}
-        title="Pagar agora com cartão"
-        description="Simulado · nenhum valor é cobrado"
-      >
-        <DemoNotice />
-        {cards.loading ? (
-          <Skeleton className="mt-3 h-14 rounded-[14px]" />
-        ) : (
-          <ul className="mt-3 space-y-2" role="radiogroup" aria-label="Cartões salvos">
-            {cards.data?.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={paymentMethodId === c.id}
-                  onClick={() => setPayment('card_mock', c.id)}
-                  className={cn(
-                    'tabular flex min-h-14 w-full items-center justify-between rounded-[14px] border px-4 text-[15px]',
-                    paymentMethodId === c.id ? 'border-gold-500 text-text-100' : 'border-ink-600 text-text-400 hover:border-gold-700',
-                  )}
-                >
-                  <span>
-                    {BRAND_LABEL[c.brand as CardBrand]} final {c.last4}
-                  </span>
-                  <span className="text-[13px]">
-                    {String(c.expMonth).padStart(2, '0')}/{String(c.expYear).slice(-2)}
-                  </span>
-                </button>
-              </li>
-            ))}
-            <li>
+      {ONLINE_PAYMENTS ? (
+        <Option
+          selected={paymentMode === 'online'}
+          onClick={() => choose('online')}
+          icon={<ShieldCheck className="size-5" strokeWidth={1.5} />}
+          title="Pagar agora online"
+          description={`${formatBRL(totalCents)} no PIX ou cartão em até 12x, na página segura da InfinitePay`}
+        >
+          <p className="text-[13px] leading-relaxed text-text-400">
+            Ao confirmar, você vai para a InfinitePay e volta para cá. O horário fica reservado por 20 minutos
+            enquanto você paga.
+          </p>
+        </Option>
+      ) : (
+        <>
+          <Option
+            selected={paymentMode === 'card_mock'}
+            onClick={() => choose('card_mock')}
+            icon={<CreditCard className="size-5" strokeWidth={1.5} />}
+            title="Pagar agora com cartão"
+            description="Simulado · nenhum valor é cobrado"
+          >
+            <DemoNotice />
+            {cards.loading ? (
+              <Skeleton className="mt-3 h-14 rounded-[14px]" />
+            ) : (
+              <ul className="mt-3 space-y-2" role="radiogroup" aria-label="Cartões salvos">
+                {cards.data?.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={paymentMethodId === c.id}
+                      onClick={() => setPayment('card_mock', c.id)}
+                      className={cn(
+                        'tabular flex min-h-14 w-full items-center justify-between rounded-[14px] border px-4 text-[15px]',
+                        paymentMethodId === c.id
+                          ? 'border-gold-500 text-text-100'
+                          : 'border-ink-600 text-text-400 hover:border-gold-700',
+                      )}
+                    >
+                      <span>
+                        {BRAND_LABEL[c.brand as CardBrand]} final {c.last4}
+                      </span>
+                      <span className="text-[13px]">
+                        {String(c.expMonth).padStart(2, '0')}/{String(c.expYear).slice(-2)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setAddOpen(true)}
+                    className="font-label flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-gold-700 text-[14px] text-gold-400 hover:bg-gold-500/5"
+                  >
+                    <Plus className="size-4" strokeWidth={1.75} />
+                    Adicionar cartão
+                  </button>
+                </li>
+              </ul>
+            )}
+          </Option>
+          <Option
+            selected={paymentMode === 'pix_mock'}
+            onClick={() => choose('pix_mock')}
+            icon={<QrCode className="size-5" strokeWidth={1.5} />}
+            title="Pagar agora com PIX"
+            description={pixChargeId ? 'PIX aprovado · tudo certo' : 'Simulado · QR code fictício'}
+          >
+            {!pixChargeId && (
               <button
                 type="button"
-                onClick={() => setAddOpen(true)}
-                className="font-label flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-gold-700 text-[14px] text-gold-400 hover:bg-gold-500/5"
+                onClick={() => setPixOpen(true)}
+                className="font-label min-h-11 text-[14px] text-gold-400 underline"
               >
-                <Plus className="size-4" strokeWidth={1.75} />
-                Adicionar cartão
+                Abrir PIX
               </button>
-            </li>
-          </ul>
-        )}
-      </Option>
-      <Option
-        selected={paymentMode === 'pix_mock'}
-        onClick={() => choose('pix_mock')}
-        icon={<QrCode className="size-5" strokeWidth={1.5} />}
-        title="Pagar agora com PIX"
-        description={pixChargeId ? 'PIX aprovado · tudo certo' : 'Simulado · QR code fictício'}
-      >
-        {!pixChargeId && (
-          <button type="button" onClick={() => setPixOpen(true)} className="font-label min-h-11 text-[14px] text-gold-400 underline">
-            Abrir PIX
-          </button>
-        )}
-      </Option>
+            )}
+          </Option>
+        </>
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen} title="Adicionar cartão">
         <CardForm

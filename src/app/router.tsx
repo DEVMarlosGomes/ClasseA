@@ -17,6 +17,7 @@ const routes: RouteObject[] = [
     children: [
       { index: true, ...page(() => import('@/features/landing/LandingPage')) },
       { path: 'agendar', ...page(() => import('@/features/booking/BookingPage')) },
+      { path: 'agendar/retorno', ...page(() => import('@/features/booking/PaymentReturnPage')) },
       { path: 'entrar', ...page(() => import('@/features/auth/SignInPage')) },
       { path: 'cadastro', ...page(() => import('@/features/auth/SignUpPage')) },
       { path: 'recuperar-senha', ...page(() => import('@/features/auth/ResetPasswordPage')) },

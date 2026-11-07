@@ -64,6 +64,7 @@ const STATUS = {
   declined: { tone: 'danger' as const, label: 'Recusado' },
   refunded: { tone: 'neutral' as const, label: 'Estornado' },
   pending: { tone: 'gold' as const, label: 'Pendente' },
+  refund_pending: { tone: 'gold' as const, label: 'Estorno em andamento' },
 };
 
 export default function ClientPaymentsPage() {
@@ -140,7 +141,7 @@ export default function ClientPaymentsPage() {
                   <div className="min-w-0">
                     <p className="text-[15px] text-text-100">{p.description}</p>
                     <p className="tabular text-[13px] text-text-400">
-                      {p.createdAt ? formatInstant(p.createdAt.toDate()) : '—'} · {p.method === 'pix_mock' ? 'PIX' : 'Cartão'} · {p.gatewayRef}
+                      {p.createdAt ? formatInstant(p.createdAt.toDate()) : '—'} · {p.method === 'pix_mock' || p.method === 'pix' ? 'PIX' : 'Cartão'} · {p.gatewayRef}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

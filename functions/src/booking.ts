@@ -1,4 +1,5 @@
 import type { DocumentReference, Transaction } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions/v2';
 import {
   cancelAppointmentSchema,
   barberUpdateStatusSchema,
@@ -6,7 +7,7 @@ import {
   getAvailableSlotsSchema,
   rescheduleAppointmentSchema,
 } from '../../shared/schemas';
-import { endTime, generateSlots, lockSlices } from '../../shared/slots';
+import { endTime, generateSlots } from '../../shared/slots';
 import { addDaysToDateKey, cycleKey, shopNow, shopTimeToDate } from '../../shared/time';
 import type {
   Appointment,
@@ -23,8 +24,9 @@ import { type Caller, callable, fail } from './lib/callable';
 import { findActiveSubscription, getBarber, getProfile, getServices, getSettings } from './lib/data';
 import { notifyUser } from './notify';
 import { GATEWAY_SECRETS, PROVIDER, gateway } from './payments/provider';
-
-const LOCK_STEP = 15;
+import { cancelInTx, lockRefs } from './lib/holds';
+import { HOLD_MINUTES, startCheckout } from './payments/onlineCheckout';
+import { ONLINE_ENABLED, ONLINE_SECRETS } from './payments/infinitepay';
 
 function assertBookable(date: string, start: string, settings: ShopSettings) {
   const now = shopNow();
@@ -45,8 +47,6 @@ function assertBarberDoesAll(barber: Barber, services: Service[]) {
   }
 }
 
-const lockRefs = (barberId: string, date: string, start: string, durationMin: number) =>
-  lockSlices(start, durationMin, LOCK_STEP).map((hhmm) => db.doc(`slotLocks/${barberId}_${date}_${hhmm}`));
 
 /**
  * Inside a transaction: re-validates the slot against fresh availability and claims every 15-minute
@@ -142,7 +142,8 @@ async function assertClientLimits(clientId: string, date: string, start: string,
   const future = await db
     .collection('appointments')
     .where('clientId', '==', clientId)
-    .where('status', '==', 'confirmed')
+    // A slot held for online payment counts too, so nobody can hold many slots at once.
+    .where('status', 'in', ['confirmed', 'pending_payment'])
     .where('startAt', '>=', Timestamp.now())
     .get();
   const others = future.docs.filter((d) => d.id !== ignoreId);
@@ -195,6 +196,11 @@ export const createAppointment = callable(createAppointmentSchema, async (input,
   if (paid && !caller.emailVerified) {
     fail('failed-precondition', 'email-unverified', 'Confirme seu e-mail para pagar online. Enviamos o link para sua caixa de entrada.');
   }
+
+  const online = input.paymentMode === 'online';
+  if (online && !ONLINE_ENABLED) fail('failed-precondition', 'online-unavailable', 'Pagamento online ainda não está disponível. Escolha pagar na barbearia.');
+  if (online && totalCents < 100) fail('failed-precondition', 'online-minimum', 'O pagamento online começa em R$ 1,00.');
+  const holdUntil = new Date(Date.now() + HOLD_MINUTES * 60_000);
 
   const coverage = await planCoverage(caller.uid, services, input.paymentMode);
   const ref = db.collection('appointments').doc();
@@ -277,7 +283,9 @@ export const createAppointment = callable(createAppointmentSchema, async (input,
         durationMin,
         totalCents,
         dueAtShopCents: coverage.dueAtShopCents,
-        status: 'confirmed',
+        // Online: the slot is held until InfinitePay confirms the payment (or the hold expires).
+        status: online ? 'pending_payment' : 'confirmed',
+        paymentHoldUntil: online ? Timestamp.fromDate(holdUntil) : null,
         paymentMode: input.paymentMode,
         paymentId,
         subscriptionId: coverage.subscription?.id ?? null,
@@ -303,47 +311,37 @@ export const createAppointment = callable(createAppointmentSchema, async (input,
   }
 
   await recomputeAvailability(barber.id, input.date);
+  if (online) {
+    let checkoutUrl: string;
+    try {
+      checkoutUrl = await startCheckout({ id: ref.id, services: coverage.services, totalCents, clientId: caller.uid }, holdUntil);
+    } catch (e) {
+      // No link, no hold: release the slot at once instead of waiting for the expiry job.
+      logger.error('infinitepay link failed', { id: ref.id, error: e instanceof Error ? e.message : String(e) });
+      await cancelInTx(ref.id, () => undefined, { status: 'payment_expired', cancelReason: 'Falha ao gerar o pagamento online' }, () => false);
+      await recomputeAvailability(barber.id, input.date);
+      fail('failed-precondition', 'online-failed', 'Não conseguimos abrir o pagamento online agora. Tente de novo ou escolha pagar na barbearia.');
+    }
+    return { id: ref.id, barberId: barber.id, barberName: barber.displayName, date: input.date, start: input.start, end, checkoutUrl };
+  }
   void notifyUser(
     caller.uid,
     'Agendamento confirmado',
     `${services.map((s) => s.name).join(' + ')} com ${barber.displayName} em ${input.date.split('-').reverse().join('/')} às ${input.start}.`,
     '/cliente/agendamentos',
   );
-  return { id: ref.id, barberId: barber.id, barberName: barber.displayName, date: input.date, start: input.start, end };
-}, { secrets: GATEWAY_SECRETS });
+  return { id: ref.id, barberId: barber.id, barberName: barber.displayName, date: input.date, start: input.start, end, checkoutUrl: null };
+}, { secrets: [...GATEWAY_SECRETS, ...ONLINE_SECRETS] });
 
-/** Cancels inside a transaction: deletes its locks and returns plan usage (all reads before writes). */
-async function cancelInTx(
-  id: string,
-  check: (a: Appointment) => void,
-  patch: Record<string, unknown>,
-  refundPlan: (a: Appointment) => boolean,
-): Promise<Appointment> {
-  let appt!: Appointment;
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(db.doc(`appointments/${id}`));
-    if (!snap.exists) fail('not-found', 'not-found', 'Agendamento não encontrado.');
-    appt = { id: snap.id, ...(snap.data() as Omit<Appointment, 'id'>) };
-    check(appt);
-    // Gather all lock reads first.
-    const refs = lockRefs(appt.barberId, appt.date, appt.start, appt.durationMin + 60);
-    const locks = await Promise.all(refs.map((r) => tx.get(r)));
-    let sub = null;
-    if (refundPlan(appt) && appt.paymentMode === 'plan' && appt.subscriptionId) sub = await tx.get(db.doc(`subscriptions/${appt.subscriptionId}`));
-    locks.forEach((l, i) => {
-      if (l.exists && l.get('appointmentId') === appt.id) tx.delete(refs[i]!);
-    });
-    if (sub?.exists) {
-      const usage = sub.get('usage') as Subscription['usage'];
-      const cycle = (appt as Appointment & { usageCycle?: string }).usageCycle;
-      if (usage && usage.cycle === cycle && usage.cutsUsed > 0) tx.update(sub.ref, { 'usage.cutsUsed': usage.cutsUsed - 1 });
-    }
-    tx.update(snap.ref, { ...patch, cancelledAt: FieldValue.serverTimestamp() });
-  });
-  return appt;
-}
 
 async function refundCard(appt: Appointment) {
+  if (appt.paymentMode === 'online') {
+    // InfinitePay has no refund API: flag it for the owner (Financeiro → estornos pendentes).
+    if (!appt.paymentId) return;
+    const pay = await db.doc(`payments/${appt.paymentId}`).get();
+    if (pay.get('status') === 'approved') await pay.ref.update({ status: 'refund_pending' });
+    return;
+  }
   if (appt.paymentMode !== 'card_mock' && appt.paymentMode !== 'pix_mock') return;
   if (!appt.paymentId) return;
   const pay = await db.doc(`payments/${appt.paymentId}`).get();
@@ -362,7 +360,7 @@ export const cancelAppointment = callable(cancelAppointmentSchema, async ({ id, 
     id,
     (a) => {
       if (a.clientId !== caller.uid) fail('permission-denied', 'forbidden', 'Este agendamento não é seu.');
-      if (a.status !== 'confirmed') fail('failed-precondition', 'not-active', 'Este agendamento já foi encerrado.');
+      if (a.status !== 'confirmed' && a.status !== 'pending_payment') fail('failed-precondition', 'not-active', 'Este agendamento já foi encerrado.');
       if (!withinPolicy(a, settings)) {
         fail(
           'failed-precondition',

@@ -12,7 +12,7 @@ import { toast } from '@/components/ui/Toast';
 import { useLiveQuery } from '@/hooks/useFirestore';
 import { call, errorMessage } from '@/lib/api';
 import { downloadIcs } from '@/lib/calendar';
-import { longDate, waLink } from '@/lib/dates';
+import { longDate, waLink, formatInstant } from '@/lib/dates';
 import { formatAddress, mapsUrl } from '@/features/landing/shopInfo';
 import { useBooking } from '@/features/booking/store';
 
@@ -25,7 +25,8 @@ export function useMyAppointments(uid: string | undefined) {
 export function splitAppointments(list: Appointment[] | undefined) {
   const now = Date.now();
   const upcoming = (list ?? [])
-    .filter((a) => a.status === 'confirmed' && a.startAt.toMillis() + a.durationMin * 60_000 > now)
+    // A slot held for online payment is shown upcoming too, with a "Pagar agora" action.
+    .filter((a) => (a.status === 'confirmed' || a.status === 'pending_payment') && a.startAt.toMillis() + a.durationMin * 60_000 > now)
     .sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis());
   const history = (list ?? []).filter((a) => !upcoming.includes(a));
   return { upcoming, history };
@@ -37,6 +38,8 @@ export const STATUS_BADGE: Record<AppointmentStatus, { tone: 'gold' | 'success' 
   no_show: { tone: 'danger', label: 'Não compareceu' },
   cancelled_by_client: { tone: 'neutral', label: 'Cancelado' },
   cancelled_by_barber: { tone: 'danger', label: 'Cancelado pela barbearia' },
+  pending_payment: { tone: 'gold', label: 'Aguardando pagamento' },
+  payment_expired: { tone: 'neutral', label: 'Pagamento não concluído' },
 };
 
 export function canChange(a: Appointment, settings: ShopSettings | undefined): boolean {
@@ -77,7 +80,23 @@ export function AppointmentActions({ appt, settings }: { appt: Appointment; sett
   return (
     <>
       <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        {changeable ? (
+        {appt.status === 'pending_payment' ? (
+          <>
+            {appt.checkoutUrl && (
+              <a href={appt.checkoutUrl} className={buttonClass('primary', 'sm')}>
+                Pagar agora
+              </a>
+            )}
+            <Button size="sm" variant="danger" icon={<X className="size-4" strokeWidth={1.75} />} onClick={() => setCancelOpen(true)}>
+              Desistir
+            </Button>
+            {appt.paymentHoldUntil && (
+              <p className="col-span-2 text-[13px] text-text-400">
+                Reservado até {formatInstant(appt.paymentHoldUntil.toDate(), 'HH:mm')}. Depois disso o horário é liberado.
+              </p>
+            )}
+          </>
+        ) : changeable ? (
           <>
             <Button size="sm" variant="secondary" icon={<CalendarClock className="size-4" strokeWidth={1.75} />} onClick={() => reschedule(appt)}>
               Reagendar

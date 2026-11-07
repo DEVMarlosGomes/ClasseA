@@ -15,6 +15,7 @@ import { useAdminBarbers } from '@/features/admin/hooks';
 import { FinanceSettingsCard } from './FinanceSettingsCard';
 import { useAppointmentsInRange, useCommissionsByPeriod, useFinanceSettingsDoc, usePaymentsInRange, usePayoutsByPeriod } from './hooks';
 import { PeriodPicker } from './PeriodPicker';
+import { RefundsCard } from './RefundsCard';
 import { type PayoutTarget, PayoutSheet } from './PayoutSheet';
 
 /** Owner only: every number of the shop for one biweekly period. */
@@ -72,6 +73,8 @@ export default function AdminFinancePage() {
         </div>
         <PeriodPicker period={period} onChange={setPeriod} />
       </div>
+
+      <RefundsCard />
 
       {failed ? (
         <ErrorState />

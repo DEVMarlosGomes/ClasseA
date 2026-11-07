@@ -5,7 +5,8 @@ import type { AppointmentStatus, AvailabilityPublic, Barber, BarberDay } from '.
 import { FieldValue, REGION, db } from './lib/admin';
 
 /** Statuses that keep a slot occupied. */
-export const OCCUPYING: AppointmentStatus[] = ['confirmed', 'completed', 'no_show'];
+// pending_payment holds the slot while the client pays online.
+export const OCCUPYING: AppointmentStatus[] = ['confirmed', 'completed', 'no_show', 'pending_payment'];
 
 export async function dayAppointments(barberId: string, date: string, tx?: Transaction) {
   const q = db

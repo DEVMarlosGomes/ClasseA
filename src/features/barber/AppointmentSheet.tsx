@@ -14,7 +14,7 @@ import { formatPhone, longDate, waLink } from '@/lib/dates';
 import { STATUS_BADGE } from '@/features/client/appointments';
 import { CloseForm, SettleForm, SettlementSummary } from '@/features/finance/SettleForms';
 
-export const PAYMENT_SHORT = { plan: 'Plano', pay_at_shop: 'Na barbearia', card_mock: 'Cartão (pago)', pix_mock: 'PIX (pago)' } as const;
+export const PAYMENT_SHORT = { plan: 'Plano', pay_at_shop: 'Na barbearia', card_mock: 'Cartão (pago)', pix_mock: 'PIX (pago)', online: 'Online (InfinitePay)' } as const;
 const CANCEL_REASONS = ['Imprevisto pessoal', 'Problema de saúde', 'Barbearia fechada', 'Outro'];
 
 export function AppointmentSheet({ appt, onClose }: { appt: Appointment | null; onClose: () => void }) {
