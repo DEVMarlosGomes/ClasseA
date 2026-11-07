@@ -20,6 +20,8 @@ async function signInStaff(page: Page, email: string) {
   await page.getByLabel('E-mail').fill(email);
   await page.getByRole('textbox', { name: 'Senha', exact: true }).fill('ClasseA#2026');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  // Sign-in + role lookup + redirect can take longer than one assertion on slow machines and mobile.
+  await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 30_000 });
 }
 
 test('landing e início do agendamento funcionam em tela pequena', async ({ page }, testInfo) => {
@@ -75,7 +77,6 @@ test('administrador abre o painel completo', async ({ page }, testInfo) => {
 
 test('Igor (barbeiro e dono) gerencia a rotina e os clientes da equipe', async ({ page }, testInfo) => {
   await signInStaff(page, 'igor@classea.test');
-  await expect(page).not.toHaveURL(/login/);
   await page.goto('/admin/rotina');
   await expect(page.getByRole('heading', { name: 'Rotina da equipe' })).toBeVisible();
   await page.getByRole('button', { name: 'Anderson CH' }).click();
