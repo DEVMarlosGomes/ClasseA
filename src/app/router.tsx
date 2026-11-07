@@ -51,6 +51,8 @@ const routes: RouteObject[] = [
         ...page(() => import('@/features/admin/AdminLayout')),
         children: [
           { index: true, ...page(() => import('@/features/admin/AdminAgendaPage')) },
+          { path: 'rotina', ...page(() => import('@/features/admin/AdminRoutinePage')) },
+          { path: 'clientes', ...page(() => import('@/features/admin/AdminClientsPage')) },
           { path: 'barbeiros', ...page(() => import('@/features/admin/AdminBarbersPage')) },
           { path: 'servicos', ...page(() => import('@/features/admin/AdminServicesPage')) },
           { path: 'planos', ...page(() => import('@/features/admin/AdminPlansPage')) },

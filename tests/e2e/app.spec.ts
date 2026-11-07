@@ -27,7 +27,7 @@ test('landing e início do agendamento funcionam em tela pequena', async ({ page
   await dismissCookies(page);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Seu estilo');
   await expect(page.getByRole('link', { name: /agendar/i }).first()).toBeVisible();
-  await expect(page.getByText('Corte', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Corte adulto', { exact: true }).first()).toBeVisible();
   const overflow = await page.evaluate(() => {
     const doc = (globalThis as unknown as { document: { documentElement: { scrollWidth: number; clientWidth: number } } }).document;
     return doc.documentElement.scrollWidth - doc.documentElement.clientWidth;
@@ -37,7 +37,7 @@ test('landing e início do agendamento funcionam em tela pequena', async ({ page
 
   await page.goto('/agendar');
   await expect(page.getByRole('region', { name: 'Serviço' })).toBeVisible();
-  await expect(page.getByText('Corte', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Corte adulto', { exact: true }).first()).toBeVisible();
   await auditScreenshot(page, testInfo, 'booking');
 });
 
@@ -54,7 +54,7 @@ test('cliente autenticado abre o painel', async ({ page }, testInfo) => {
 });
 
 test('barbeiro abre agenda e clientes', async ({ page }, testInfo) => {
-  await signInStaff(page, 'rafael@classea.test');
+  await signInStaff(page, 'roberth@classea.test');
   await expect(page).toHaveURL(/\/barbeiro$/);
   await expect(page.getByRole('heading', { name: /Hoje/ })).toBeVisible();
   await page.goto('/barbeiro/agenda');
@@ -69,6 +69,22 @@ test('administrador abre o painel completo', async ({ page }, testInfo) => {
   await page.goto('/admin/servicos');
   await expect(page.getByRole('heading', { name: 'Serviços' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo serviço' })).toBeVisible();
-  await expect(page.getByText('Corte', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Corte adulto', { exact: true }).first()).toBeVisible();
   await auditScreenshot(page, testInfo, 'admin-services');
+});
+
+test('Igor (barbeiro e dono) gerencia a rotina e os clientes da equipe', async ({ page }, testInfo) => {
+  await signInStaff(page, 'igor@classea.test');
+  await expect(page).not.toHaveURL(/login/);
+  await page.goto('/admin/rotina');
+  await expect(page.getByRole('heading', { name: 'Rotina da equipe' })).toBeVisible();
+  await page.getByRole('button', { name: 'Anderson CH' }).click();
+  await expect(page.getByRole('heading', { name: 'Agenda de Anderson CH' })).toBeVisible();
+  // The grid only renders once the barber, his days and appointments load for the admin.
+  await expect(page.getByRole('button', { name: /^\d{2}:\d{2}, (livre|ocupado|bloqueado|fora)/ }).first()).toBeVisible();
+  await auditScreenshot(page, testInfo, 'admin-routine');
+  await page.goto('/admin/clientes');
+  await expect(page.getByRole('heading', { name: 'Clientes da barbearia' })).toBeVisible();
+  await expect(page.getByText(/Atendido por/).first()).toBeVisible();
+  await auditScreenshot(page, testInfo, 'admin-clients');
 });

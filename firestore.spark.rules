@@ -193,6 +193,10 @@ service cloud.firestore {
     }
 
     // ---------- barber's client book ----------
+    // Owner's panel: every barber's client book in one collection-group query (read only).
+    match /{path=**}/clients/{clientId} {
+      allow read: if isAdmin();
+    }
     match /barberClients/{barberId}/clients/{clientId} {
       allow read: if (isOwner(barberId) && isBarber()) || isAdmin();
       allow write: if (isOwner(barberId) && isBarber()) || isAdmin();

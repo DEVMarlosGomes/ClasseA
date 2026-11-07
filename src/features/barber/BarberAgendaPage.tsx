@@ -193,6 +193,14 @@ function TemplateEditor({
 export default function BarberAgendaPage() {
   useDocumentMeta({ title: 'Agenda', noindex: true });
   const { user } = useAuth();
+  return user ? <AgendaEditor barberId={user.uid} /> : null;
+}
+
+/**
+ * Week/day editor of one barber's agenda. The barber edits their own; the admin (owner) passes any
+ * barberId — the Firestore rules and barberUpdateAppointmentStatus already allow the admin.
+ */
+export function AgendaEditor({ barberId, title = 'Agenda' }: { barberId: string; title?: string }) {
   const desktop = useIsDesktop();
   const [view, setView] = useState<'dia' | 'semana'>(desktop ? 'semana' : 'dia');
   const [anchor, setAnchor] = useState(todayKey());
@@ -212,9 +220,9 @@ export default function BarberAgendaPage() {
   const from = dates[0]!;
   const to = dates[dates.length - 1]!;
 
-  const barber = useMyBarber(user?.uid);
-  const days = useBarberDays(user?.uid, from, to);
-  const appts = useBarberAppointments(user?.uid, from, to);
+  const barber = useMyBarber(barberId);
+  const days = useBarberDays(barberId, from, to);
+  const appts = useBarberAppointments(barberId, from, to);
   const reasonValue = reason === 'Outro' ? null : reason;
 
   const dayMap = useMemo(() => new Map((days.data ?? []).map((d) => [d.id, stripDay(d)])), [days.data]);
@@ -268,7 +276,6 @@ export default function BarberAgendaPage() {
   };
 
   const apply = (date: string, cells: DayColumn['cells'], mode: SelectionMode) => {
-    if (!user) return;
     const prev = dayMap.get(date) ?? null;
     if (mode === 'release') {
       const ranges = cellsToRanges(
@@ -277,7 +284,7 @@ export default function BarberAgendaPage() {
       );
       if (!ranges.length) return;
       void saveDays(
-        user.uid,
+        barberId,
         [{ date, prev, next: releaseRanges(prev, ranges) }],
         ranges.length === 1 && cells.length === 1 ? `${cells[0]!.start} liberado.` : 'Horários liberados.',
       );
@@ -306,7 +313,7 @@ export default function BarberAgendaPage() {
           );
       if (!keep.length) return;
       await saveDays(
-        user.uid,
+        barberId,
         [{ date, prev, next: blockRanges(prev, keep, reasonValue) }],
         cells.length === 1 ? `${cells[0]!.start} bloqueado.` : 'Horários bloqueados.',
       );
@@ -316,10 +323,10 @@ export default function BarberAgendaPage() {
   };
 
   const quickDay = (kind: 'block' | 'release') => {
-    if (!user || view !== 'dia') return;
+    if (view !== 'dia') return;
     const prev = dayMap.get(anchor) ?? null;
     if (kind === 'release')
-      return void saveDays(user.uid, [{ date: anchor, prev, next: releaseWholeDay(prev) }], 'Dia liberado.');
+      return void saveDays(barberId, [{ date: anchor, prev, next: releaseWholeDay(prev) }], 'Dia liberado.');
     const clash = active.filter((a) => a.status === 'confirmed' && a.date === anchor);
     const run = async (cancel: boolean) => {
       if (cancel)
@@ -336,13 +343,13 @@ export default function BarberAgendaPage() {
           barber.data!.slotIntervalMin,
         );
         return saveDays(
-          user.uid,
+          barberId,
           [{ date: anchor, prev, next: blockRanges(prev, ranges, reasonValue) }],
           'Horários livres do dia bloqueados.',
         );
       }
       await saveDays(
-        user.uid,
+        barberId,
         [{ date: anchor, prev, next: blockWholeDay(prev, reasonValue) }],
         'Dia bloqueado.',
       );
@@ -352,31 +359,30 @@ export default function BarberAgendaPage() {
   };
 
   const copyWeek = async () => {
-    if (!user) return;
     const ws = weekStart(anchor);
     const src = Array.from({ length: 7 }, (_, i) => addDaysToDateKey(ws, i));
     const { db, doc, getDoc } = await loadFirestore();
     const changes = await Promise.all(
       src.map(async (d) => {
         const target = addDaysToDateKey(d, 7);
-        const prevSnap = await getDoc(doc(db, `barbers/${user.uid}/days/${target}`));
+        const prevSnap = await getDoc(doc(db, `barbers/${barberId}/days/${target}`));
         const prev = prevSnap.exists() ? stripDay(prevSnap.data() as BarberDay) : null;
         const next = dayMap.get(d) ?? { status: 'open' as const, blocks: [], extraOpenings: [] };
         return { date: target, prev, next };
       }),
     );
-    await saveDays(user.uid, changes, `Semana copiada para ${compactDate(addDaysToDateKey(ws, 7))}.`);
+    await saveDays(barberId, changes, `Semana copiada para ${compactDate(addDaysToDateKey(ws, 7))}.`);
   };
 
   const blockPeriod = async () => {
-    if (!user || period.from > period.to) return;
+    if (period.from > period.to) return;
     const list: string[] = [];
     for (let d = period.from; d <= period.to && list.length < 62; d = addDaysToDateKey(d, 1)) list.push(d);
     const { db, collection, getDocs, query, where, doc, getDoc } = await loadFirestore();
     const snap = await getDocs(
       query(
         collection(db, 'appointments'),
-        where('barberId', '==', user.uid),
+        where('barberId', '==', barberId),
         where('date', '>=', period.from),
         where('date', '<=', period.to),
       ),
@@ -395,13 +401,13 @@ export default function BarberAgendaPage() {
         list
           .filter((d) => !keepDates.has(d))
           .map(async (d) => {
-            const s = await getDoc(doc(db, `barbers/${user.uid}/days/${d}`));
+            const s = await getDoc(doc(db, `barbers/${barberId}/days/${d}`));
             const prev = s.exists() ? stripDay(s.data() as BarberDay) : null;
             return { date: d, prev, next: blockWholeDay(prev, reasonValue) };
           }),
       );
       await saveDays(
-        user.uid,
+        barberId,
         changes,
         `${changes.length} ${changes.length === 1 ? 'dia bloqueado' : 'dias bloqueados'}.`,
       );
@@ -419,7 +425,7 @@ export default function BarberAgendaPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-label text-[36px] leading-tight text-text-100">Agenda</h1>
+          <h1 className="font-label text-[36px] leading-tight text-text-100">{title}</h1>
           <p className="text-[14px] text-text-400">
             Toque para bloquear ou liberar. Segure e arraste para vários horários.
           </p>
@@ -633,10 +639,9 @@ export default function BarberAgendaPage() {
             block
             disabled={!(isHHmm(extra.start) && isHHmm(extra.end) && extra.start < extra.end)}
             onClick={() => {
-              if (!user) return;
-              const prev = dayMap.get(anchor) ?? null;
+                        const prev = dayMap.get(anchor) ?? null;
               void saveDays(
-                user.uid,
+                barberId,
                 [{ date: anchor, prev, next: addExtraOpening(prev, extra) }],
                 `Horário extra das ${extra.start} às ${extra.end}.`,
               );

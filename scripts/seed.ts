@@ -8,7 +8,7 @@
  * Emulator-only test accounts (never use in production) — password for all: ClasseA#2026
  *   dono@classea.test       admin
  *   roberth@classea.test    barber
- *   igor@classea.test       barber
+ *   igor@classea.test       barber + admin (the owner: runs the shop and the panel)
  *   anderson@classea.test   barber
  *   cliente@classea.test    client with an active monthly plan and a saved test card
  */
@@ -122,6 +122,7 @@ async function main() {
       specialties: ['Corte', 'Barba', 'Acabamento'],
       all: true,
       featured: true,
+      admin: true,
     },
     {
       email: 'anderson@classea.test',
@@ -134,7 +135,7 @@ async function main() {
   ];
   const barbers: Barber[] = [];
   for (const [i, b] of barberDefs.entries()) {
-    const uid = await upsertUser(b.email, b.name, ['barber'], `+551190000001${i}`);
+    const uid = await upsertUser(b.email, b.name, b.admin ? ['barber', 'admin'] : ['barber'], `+551190000001${i}`);
     const allIds = Object.values(serviceIds);
     const barber: Barber = {
       id: uid,
@@ -152,8 +153,8 @@ async function main() {
       slotIntervalMin: 30,
       bufferMin: 0,
       featured: b.featured ?? false,
-      roleLabel: b.featured ? 'Proprietário' : undefined,
-      photoPosition: b.featured ? '68% center' : undefined,
+      // Firestore rejects undefined values: only the owner carries these fields.
+      ...(b.featured ? { roleLabel: 'Proprietário', photoPosition: '68% center' } : {}),
     };
     const { id: _id, ...doc } = barber;
     void _id;
@@ -222,7 +223,7 @@ async function main() {
     const s = SEED_SERVICES.find((x) => x.name === name)!;
     return { id: serviceIds[name]!, name: s.name, durationMin: s.durationMin, priceCents: s.priceCents };
   };
-  const combos = [['Corte'], ['Corte + barba'], ['Barba'], ['Degradê navalhado'], ['Corte', 'Sobrancelha']];
+  const combos = [['Corte adulto'], ['Corte e sobrancelha'], ['Barba completa'], ['Corte e barba e sobrancelha'], ['Corte adulto', 'Sobrancelha ou Pezinho']];
   const busy = new Map<string, { start: string; end: string }[]>();
   let created = 0;
 

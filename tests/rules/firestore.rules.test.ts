@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { collectionGroup, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -78,5 +78,21 @@ describe('administrator', () => {
     await assertSucceeds(setDoc(doc(db, 'services/barba'), { name: 'Barba', active: true }));
     await assertSucceeds(getDoc(doc(db, 'appointments/other')));
     await assertSucceeds(getDoc(doc(db, 'users/client-b')));
+  });
+
+  it("reads every barber's client book in one query; barbers and clients cannot", async () => {
+    const owner = env.authenticatedContext('owner', { roles: ['admin'] }).firestore();
+    await assertSucceeds(getDocs(query(collectionGroup(owner, 'clients'))));
+    const barber = env.authenticatedContext('barber-a', { roles: ['barber'] }).firestore();
+    await assertFails(getDocs(query(collectionGroup(barber, 'clients'))));
+    const client = env.authenticatedContext('client-a', { roles: ['client'] }).firestore();
+    await assertFails(getDocs(query(collectionGroup(client, 'clients'))));
+  });
+
+  it("edits another barber's day only with its own uid as updatedBy", async () => {
+    const db = env.authenticatedContext('owner', { roles: ['admin', 'barber'] }).firestore();
+    const day = { status: 'closed', blocks: [], extraOpenings: [], updatedAt: serverTimestamp() };
+    await assertSucceeds(setDoc(doc(db, 'barbers/barber-b/days/2026-11-10'), { ...day, updatedBy: 'owner' }));
+    await assertFails(setDoc(doc(db, 'barbers/barber-b/days/2026-11-11'), { ...day, updatedBy: 'barber-b' }));
   });
 });

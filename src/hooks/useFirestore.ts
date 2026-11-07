@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { DocumentData, Query } from 'firebase/firestore';
+import type { DocumentData, Query, QueryDocumentSnapshot } from 'firebase/firestore';
 import { type FirestoreKit, loadFirestore } from '@/lib/firebase';
 
 export interface LiveState<T> {
@@ -44,10 +44,12 @@ export function useLiveDoc<T>(path: string | null): LiveState<T | null> {
 
 /**
  * Realtime query listener. `key` identifies the query (change it to resubscribe); `build` returns null to pause.
+ * `map` overrides the default `{ id, ...data }` shape (e.g. to read the parent path of a collection group).
  */
 export function useLiveQuery<T>(
   key: string | null,
   build: (kit: FirestoreKit) => Query<DocumentData> | null,
+  map: (d: QueryDocumentSnapshot) => T = (d) => ({ id: d.id, ...d.data() }) as T,
 ): LiveState<T[]> {
   const [state, setState] = useState<LiveState<T[]>>({ data: undefined, loading: !!key, error: null });
   useEffect(() => {
@@ -67,7 +69,7 @@ export function useLiveQuery<T>(
           q,
           (snap) =>
             setState({
-              data: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as T),
+              data: snap.docs.map(map),
               loading: false,
               error: null,
             }),

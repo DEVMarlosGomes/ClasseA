@@ -2,7 +2,7 @@ import type { Appointment, Barber, BarberDay } from '@shared/types';
 import { toast } from '@/components/ui/Toast';
 import { useLiveDoc, useLiveQuery } from '@/hooks/useFirestore';
 import { errorMessage } from '@/lib/api';
-import { SPARK, loadFirestore } from '@/lib/firebase';
+import { SPARK, loadAuth, loadFirestore } from '@/lib/firebase';
 
 export function useMyBarber(uid: string | undefined) {
   return useLiveDoc<Barber>(uid ? `barbers/${uid}` : null);
@@ -37,7 +37,7 @@ export function useBarberAppointments(uid: string | undefined, from: string, to:
 }
 
 async function writeDay(uid: string, date: string, day: BarberDay | null) {
-  const { db, doc, setDoc, deleteDoc, serverTimestamp } = await loadFirestore();
+  const [{ db, doc, setDoc, deleteDoc, serverTimestamp }, { auth }] = await Promise.all([loadFirestore(), loadAuth()]);
   const ref = doc(db, `barbers/${uid}/days/${date}`);
   if (!day) await deleteDoc(ref);
   else
@@ -46,7 +46,8 @@ async function writeDay(uid: string, date: string, day: BarberDay | null) {
       blocks: day.blocks.map((b) => ({ start: b.start, end: b.end, reason: b.reason ?? null })),
       extraOpenings: day.extraOpenings.map((r) => ({ start: r.start, end: r.end })),
       updatedAt: serverTimestamp(),
-      updatedBy: uid,
+      // The rules require the editor's own uid: the barber, or the admin editing someone's agenda.
+      updatedBy: auth.currentUser?.uid ?? uid,
     });
   // Spark plan: there is no onBarberDayWrite trigger, so the public projection is rebuilt here.
   if (SPARK) await (await import('@/lib/spark')).recomputeAvailability(uid, date);
