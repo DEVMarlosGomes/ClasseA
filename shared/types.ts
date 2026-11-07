@@ -1,6 +1,6 @@
 import type { TimeRange, WeekdayKey } from './time';
 
-export type Role = 'client' | 'barber' | 'admin';
+export type Role = 'client' | 'barber' | 'admin' | 'reception';
 
 /** Firestore Timestamp-like value; the concrete class differs between web and admin SDKs. */
 export interface TimestampLike {
@@ -60,6 +60,8 @@ export interface Barber {
   slotIntervalMin: number;
   bufferMin: number;
   featured?: boolean;
+  /** Commission % for this barber; null/absent = settings/finance default. 0 for the owner. */
+  commissionPct?: number | null;
   roleLabel?: string;
   photoPosition?: string;
 }
@@ -139,6 +141,10 @@ export interface Appointment {
   createdAt: TimestampLike;
   cancelledAt?: TimestampLike | null;
   reminders?: { h24?: boolean; h2?: boolean };
+  /** "Baixa": what was actually received. Written only by settleAppointment. */
+  settlement?: Settlement | null;
+  /** Closed as not completed (e.g. client did not come), with the reason. */
+  closure?: Closure | null;
 }
 
 export type PlanPeriod = 'monthly' | 'semiannual' | 'annual';
@@ -218,6 +224,78 @@ export interface CookieChoices {
   necessary: true;
   analytics: boolean;
   marketing: boolean;
+}
+
+// ---------- finance ----------
+
+export type FeePlatform = 'infinitepay' | 'mercadopago';
+export type ShopMethod = 'cash' | 'pix' | 'credit' | 'debit';
+
+export interface SettlementPart {
+  platform: FeePlatform | 'none';
+  receivedCents: number;
+  feeCents: number;
+}
+
+export interface Settlement {
+  /** Paid at the counter (null when nothing was due there). */
+  shop: (SettlementPart & { method: ShopMethod }) | null;
+  /** Paid in the app before the visit. */
+  online: SettlementPart | null;
+  /** Table price of the services covered by the client's plan. */
+  planCoveredCents: number;
+  receivedCents: number;
+  feeCents: number;
+  paidAt: TimestampLike;
+  registeredBy: string;
+  registeredByName: string;
+}
+
+export interface Closure {
+  reason: string;
+  at: TimestampLike;
+  by: string;
+  byName: string;
+}
+
+/** commissions/{appointmentId}: one per settled appointment. Barbers read only their own. */
+export interface Commission {
+  id: string;
+  appointmentId: string;
+  barberId: string;
+  barberName: string;
+  date: string;
+  /** Biweekly payout period, e.g. 2026-11-A (1–15) or 2026-11-B (16–end). */
+  period: string;
+  services: string[];
+  receivedCents: number;
+  feeCents: number;
+  deductedFeeCents: number;
+  planCoveredCents: number;
+  baseCents: number;
+  pct: number;
+  amountCents: number;
+  settledAt: TimestampLike;
+}
+
+export interface FinanceSettings {
+  defaultCommissionPct: number;
+  deductPlatformFees: boolean;
+  deductFrom: FeePlatform[];
+  /** Fee % per platform and method, from the owner's contracts. */
+  fees: Record<FeePlatform, Partial<Record<'pix' | 'credit' | 'debit', number>>>;
+}
+
+/** payouts/{barberId}_{period}: what the owner paid a barber for one biweekly period. */
+export interface Payout {
+  id: string;
+  barberId: string;
+  period: string;
+  amountCents: number;
+  method: ShopMethod | 'transfer';
+  note: string;
+  paidAt: TimestampLike;
+  registeredBy: string;
 }
 
 export interface ShopSettings {

@@ -15,6 +15,7 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { call, errorMessage } from '@/lib/api';
 import { loadFirestore } from '@/lib/firebase';
 import { useAdminBarbers, useAdminServices } from './hooks';
+import { ReceptionAccessCard } from './ReceptionAccessCard';
 
 interface Draft { displayName: string; email: string; bio: string; specialties: string[]; serviceIds: string[]; }
 const empty: Draft = { displayName: '', email: '', bio: '', specialties: [], serviceIds: [] };
@@ -60,6 +61,7 @@ export default function AdminBarbersPage() {
       {barbers.error ? <ErrorState /> : barbers.loading ? <Skeleton className="h-72 rounded-[20px]" /> : !barbers.data?.length ? <Card><EmptyState title="Nenhum barbeiro cadastrado" /></Card> : (
         <div className="grid gap-4 lg:grid-cols-2">{barbers.data.map((b) => <Card key={b.id} className="p-5"><div className="flex items-start gap-4"><Avatar name={b.displayName} src={b.photoUrl} size={56} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-label text-[22px] text-text-100">{b.displayName}</h2>{!b.active && <Badge>Inativo</Badge>}</div><p className="mt-1 text-[13px] leading-relaxed text-text-400">{b.bio || 'Bio ainda não preenchida.'}</p><div className="mt-3 flex flex-wrap gap-2">{b.specialties.map((s) => <Badge key={s} tone="gold">{s}</Badge>)}</div><p className="mt-3 text-[12px] text-text-400">{b.serviceIds.length} serviços · intervalos de {b.slotIntervalMin} min</p></div><button onClick={() => setEditing(b)} aria-label={`Editar ${b.displayName}`} className="grid size-11 shrink-0 place-items-center rounded-full text-text-400 hover:bg-white/5 hover:text-gold-400"><Pencil className="size-4" /></button></div><div className="mt-4 border-t border-white/5 pt-3"><Switch checked={b.active} onCheckedChange={() => void toggle(b)} label={b.active ? 'Disponível para agendamento' : 'Inativo'} description="Desativar preserva agenda e histórico." /></div></Card>)}</div>
       )}
+      <ReceptionAccessCard />
       <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(null)} title={editing === 'new' ? 'Novo barbeiro' : 'Editar barbeiro'} description={editing === 'new' ? 'A conta será criada e receberá um convite para definir a senha.' : 'As mudanças aparecem na landing e no agendamento.'} footer={<Button block size="lg" loading={saving} onClick={() => void save()}>Salvar barbeiro</Button>}>
         <div className="space-y-4">
           <Input label="Nome de exibição" value={draft.displayName} onChange={(e) => setDraft((d) => ({ ...d, displayName: e.target.value }))} />

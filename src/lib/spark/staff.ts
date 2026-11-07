@@ -1,6 +1,6 @@
 import { deleteApp, initializeApp } from 'firebase/app';
 import { DEFAULT_TEMPLATE } from '@shared/defaults';
-import { createBarberSchema, setUserRoleSchema } from '@shared/schemas';
+import { createBarberSchema, createReceptionSchema, setUserRoleSchema } from '@shared/schemas';
 import type { Role } from '@shared/types';
 import { firebaseConfig } from '../firebase';
 import { OCCUPYING, fail, getRoles, kit, notifyUser, primaryRole, randomId } from './core';
@@ -107,7 +107,48 @@ const createBarber = handler(
   { roles: ['admin'] },
 );
 
-export const callables = { setUserRole, createBarber };
+/** Front-desk account (agenda + "dar baixa", no finance). Same throwaway-app trick as createBarber. */
+const createReception = handler(
+  createReceptionSchema,
+  async (input) => {
+    const auth = await import('firebase/auth');
+    const secondary = initializeApp(firebaseConfig, `invite-${Date.now()}`);
+    let uid: string;
+    try {
+      const a = auth.getAuth(secondary);
+      a.languageCode = 'pt-BR';
+      try {
+        const cred = await auth.createUserWithEmailAndPassword(a, input.email, `${randomId('', 24)}!a1`);
+        await auth.updateProfile(cred.user, { displayName: input.name });
+        uid = cred.user.uid;
+      } catch (e) {
+        if ((e as { code?: string }).code === 'auth/email-already-in-use') {
+          fail('already-exists', 'email-in-use', 'Já existe uma conta com este e-mail.');
+        }
+        throw e;
+      }
+      await auth.sendPasswordResetEmail(a, input.email);
+      await auth.signOut(a);
+    } finally {
+      await deleteApp(secondary);
+    }
+    const { db, doc, writeBatch, serverTimestamp } = await kit();
+    const roles = new Set<Role>(await getRoles(uid).catch(() => []));
+    roles.add('reception');
+    const batch = writeBatch(db);
+    batch.set(doc(db, `roles/${uid}`), { roles: [...roles] });
+    batch.set(
+      doc(db, `users/${uid}`),
+      { name: input.name, email: input.email, phone: '', role: primaryRole(roles), roles: [...roles], createdAt: serverTimestamp() },
+      { merge: true },
+    );
+    await batch.commit();
+    return { uid, inviteLink: null };
+  },
+  { roles: ['admin'] },
+);
+
+export const callables = { setUserRole, createBarber, createReception };
 
 /**
  * Keeps the barber's client book (visits, last visit, favourites, no-shows) in sync. Runs as whoever

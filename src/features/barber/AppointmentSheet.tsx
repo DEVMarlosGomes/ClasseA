@@ -12,17 +12,19 @@ import { toast } from '@/components/ui/Toast';
 import { call, errorMessage } from '@/lib/api';
 import { formatPhone, longDate, waLink } from '@/lib/dates';
 import { STATUS_BADGE } from '@/features/client/appointments';
+import { CloseForm, SettleForm, SettlementSummary } from '@/features/finance/SettleForms';
 
 export const PAYMENT_SHORT = { plan: 'Plano', pay_at_shop: 'Na barbearia', card_mock: 'Cartão (pago)', pix_mock: 'PIX (pago)' } as const;
 const CANCEL_REASONS = ['Imprevisto pessoal', 'Problema de saúde', 'Barbearia fechada', 'Outro'];
 
 export function AppointmentSheet({ appt, onClose }: { appt: Appointment | null; onClose: () => void }) {
-  const [mode, setMode] = useState<'view' | 'cancel'>('view');
+  const [mode, setMode] = useState<'view' | 'cancel' | 'settle' | 'close'>('view');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   if (!appt) return null;
   const startsIn = appt.startAt.toMillis() - Date.now();
-  const canMark = startsIn <= 30 * 60_000 && ['confirmed', 'completed', 'no_show'].includes(appt.status);
+  // Settled visits are final; closing as not completed is allowed until a payment is registered.
+  const canMark = startsIn <= 30 * 60_000 && !appt.settlement && ['confirmed', 'completed', 'no_show'].includes(appt.status);
   const status = STATUS_BADGE[appt.status];
 
   const update = async (status: 'completed' | 'no_show' | 'cancelled_by_barber') => {
@@ -62,13 +64,13 @@ export function AppointmentSheet({ appt, onClose }: { appt: Appointment | null; 
               Cancelar e avisar
             </Button>
           </div>
-        ) : appt.status === 'confirmed' || canMark ? (
+        ) : mode === 'view' && (appt.status === 'confirmed' || canMark) ? (
           <div className="grid grid-cols-2 gap-2">
-            <Button disabled={!canMark} loading={busy === 'completed'} icon={<Check className="size-4" />} onClick={() => void update('completed')}>
-              Concluir
+            <Button disabled={!canMark} icon={<Check className="size-4" />} onClick={() => setMode('settle')}>
+              Dar baixa
             </Button>
-            <Button variant="secondary" disabled={!canMark} loading={busy === 'no_show'} icon={<UserX className="size-4" strokeWidth={1.75} />} onClick={() => void update('no_show')}>
-              Não veio
+            <Button variant="secondary" disabled={!canMark || appt.status === 'no_show'} icon={<UserX className="size-4" strokeWidth={1.75} />} onClick={() => setMode('close')}>
+              Não concluído
             </Button>
             {appt.status === 'confirmed' && (
               <Button variant="danger" className="col-span-2" icon={<X className="size-4" />} onClick={() => setMode('cancel')}>
@@ -79,8 +81,13 @@ export function AppointmentSheet({ appt, onClose }: { appt: Appointment | null; 
         ) : undefined
       }
     >
-      {mode === 'view' ? (
+      {mode === 'settle' ? (
+        <SettleForm appt={appt} onBack={() => setMode('view')} onDone={() => { setMode('view'); onClose(); }} />
+      ) : mode === 'close' ? (
+        <CloseForm appt={appt} onBack={() => setMode('view')} onDone={() => { setMode('view'); onClose(); }} />
+      ) : mode === 'view' ? (
         <div className="space-y-4">
+          <SettlementSummary appt={appt} />
           <div className="flex flex-wrap gap-2">
             <Badge tone={status.tone}>{status.label}</Badge>
             {appt.paymentMode === 'plan' && <Badge tone="gold">Plano</Badge>}
@@ -112,7 +119,7 @@ export function AppointmentSheet({ appt, onClose }: { appt: Appointment | null; 
             </a>
           )}
           {!canMark && appt.status === 'confirmed' && (
-            <p className="text-[13px] text-text-400">Concluir e marcar falta ficam disponíveis a partir de 30 min antes do horário.</p>
+            <p className="text-[13px] text-text-400">Dar baixa e encerrar ficam disponíveis a partir de 30 min antes do horário.</p>
           )}
         </div>
       ) : (

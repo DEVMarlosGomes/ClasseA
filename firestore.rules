@@ -19,6 +19,9 @@ service cloud.firestore {
     function isBarber() {
       return hasRole('barber');
     }
+    function isReception() {
+      return hasRole('reception');
+    }
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
@@ -118,7 +121,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /settings/{id} {
-      allow read: if true;
+      // Shop info is public; commission % and fee table (settings/finance) are the owner's.
+      allow read: if id != 'finance' || isAdmin();
       allow write: if isAdmin();
     }
     match /legalDocs/{type} {
@@ -134,6 +138,7 @@ service cloud.firestore {
     match /appointments/{id} {
       allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid)
         || (isBarber() && resource.data.barberId == request.auth.uid)
+        || isReception()
         || isAdmin();
       allow write: if false;
     }
@@ -156,6 +161,22 @@ service cloud.firestore {
     match /pixCharges/{id} {
       allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isAdmin();
       allow write: if false;
+    }
+
+    // ---------- finance (written by Functions; payouts by the owner) ----------
+    // A barber sees only his own commissions and payouts; the front desk sees none.
+    match /commissions/{id} {
+      allow read: if (isBarber() && resource.data.barberId == request.auth.uid) || isAdmin();
+      allow write: if false;
+    }
+    // Id = {barberId}_{period}: a barber may read his own even before it exists (shows "a receber").
+    match /payouts/{id} {
+      allow read: if (isBarber() && id.matches(request.auth.uid + '_[0-9]{4}-[0-9]{2}-[AB]')) || isAdmin();
+      allow create, update: if isAdmin()
+        && id == request.resource.data.barberId + '_' + request.resource.data.period
+        && request.resource.data.amountCents is int && request.resource.data.amountCents >= 0
+        && request.resource.data.registeredBy == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
     // ---------- barber's client book ----------

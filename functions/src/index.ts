@@ -7,7 +7,8 @@ export {
   rescheduleAppointment,
 } from './booking';
 export { onBarberDayWrite, onBarberWrite } from './availability';
-export { onAppointmentWrite, createBarber, setUserRole } from './staff';
+export { onAppointmentWrite, createBarber, createReception, setUserRole } from './staff';
+export { settleAppointment } from './finance';
 export {
   addPaymentMethod,
   cancelSubscription,

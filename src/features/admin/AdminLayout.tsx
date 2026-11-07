@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   CalendarRange,
+  ClipboardCheck,
   Crown,
   FileText,
   LogOut,
@@ -9,6 +10,7 @@ import {
   Settings,
   UserRoundCog,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 import { Logo } from '@/components/ui/Logo';
@@ -22,6 +24,8 @@ const items: TabBarItem[] = [
   { to: '/admin', label: 'Agenda', icon: CalendarDays, end: true },
   { to: '/admin/rotina', label: 'Rotina', icon: CalendarRange },
   { to: '/admin/clientes', label: 'Clientes', icon: Users },
+  { to: '/admin/financeiro', label: 'Financeiro', icon: Wallet },
+  { to: '/recepcao', label: 'Recepção', icon: ClipboardCheck },
   { to: '/admin/barbeiros', label: 'Barbeiros', icon: UserRoundCog },
   { to: '/admin/servicos', label: 'Serviços', icon: Scissors },
   { to: '/admin/planos', label: 'Planos', icon: Crown },

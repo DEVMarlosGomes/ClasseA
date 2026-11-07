@@ -102,6 +102,11 @@ export const barberUpdateStatusSchema = z
   .refine((v) => v.status !== 'cancelled_by_barber' || (v.reason && v.reason.length >= 3), {
     message: 'Informe o motivo do cancelamento',
     path: ['reason'],
+  })
+  // Closing a visit as not completed (client did not come) needs a written reason; date and time are recorded.
+  .refine((v) => v.status !== 'no_show' || (v.reason && v.reason.length >= 3), {
+    message: 'Informe por que o atendimento não foi concluído',
+    path: ['reason'],
   });
 
 /**
@@ -142,7 +147,7 @@ export const pixChargeIdSchema = z.object({ chargeId: z.string().min(1) });
 
 export const setUserRoleSchema = z.object({
   uid: z.string().min(1),
-  roles: z.array(z.enum(['client', 'barber', 'admin'])).min(1),
+  roles: z.array(z.enum(['client', 'barber', 'admin', 'reception'])).min(1),
 });
 
 export const createBarberSchema = z.object({
@@ -151,6 +156,22 @@ export const createBarberSchema = z.object({
   bio: z.string().trim().max(240).default(''),
   specialties: z.array(z.string().trim().min(1)).max(6).default([]),
   serviceIds: z.array(z.string()).default([]),
+});
+
+export const createReceptionSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+  email: z.string().trim().toLowerCase().email('E-mail inválido'),
+});
+
+/** "Dar baixa": the visit happened and the counter part was paid. */
+export const settleAppointmentSchema = z.object({
+  id: z.string().min(1),
+  /** How the counter part was paid; ignored when nothing is due at the shop. */
+  method: z.enum(['cash', 'pix', 'credit', 'debit']).nullable(),
+  /** Card machine / account that received it (fees), "none" = no fee (cash, direct PIX). */
+  platform: z.enum(['infinitepay', 'mercadopago', 'none']).default('none'),
+  /** What was actually received at the counter, in cents. */
+  receivedCents: z.number().int().min(0).max(10_000_00),
 });
 
 export const deleteMyAccountSchema = z.object({ confirmation: z.literal('EXCLUIR') });

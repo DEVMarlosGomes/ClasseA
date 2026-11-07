@@ -569,10 +569,12 @@ export const barberUpdateAppointmentStatus: Handler = handler(
   barberUpdateStatusSchema,
   async ({ id, status, reason }, caller: Caller) => {
     const { db, doc, getDoc, updateDoc, serverTimestamp } = await kit();
-    const isAdmin = caller.roles.includes('admin');
+    // The owner and the front desk manage every barber's agenda; a barber only his own.
+    const isAdmin = caller.roles.includes('admin') || caller.roles.includes('reception');
     const check = (a: Appointment) => {
       if (a.barberId !== caller.uid && !isAdmin)
         fail('permission-denied', 'forbidden', 'Este atendimento não é da sua agenda.');
+      if (a.settlement) fail('failed-precondition', 'already-settled', 'Este atendimento já teve baixa de pagamento.');
       if (status === 'cancelled_by_barber' && a.status !== 'confirmed') {
         fail('failed-precondition', 'not-active', 'Só dá para cancelar atendimentos confirmados.');
       }
@@ -605,9 +607,17 @@ export const barberUpdateAppointmentStatus: Handler = handler(
         'Só dá para marcar como concluído ou falta a partir do horário do atendimento.',
       );
     }
-    await updateDoc(ref, { status, statusUpdatedAt: serverTimestamp() });
+    await updateDoc(ref, {
+      status,
+      statusUpdatedAt: serverTimestamp(),
+      // Not completed (client did not come): keep why, when and who closed it.
+      closure:
+        status === 'no_show'
+          ? { reason: reason ?? '', at: serverTimestamp(), by: caller.uid, byName: caller.name ?? caller.email ?? '' }
+          : null,
+    });
     void refreshBarberClient(appt.barberId, appt.clientId);
     return { ok: true };
   },
-  { roles: ['barber', 'admin'] },
+  { roles: ['barber', 'admin', 'reception'] },
 );

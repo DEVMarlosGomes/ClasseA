@@ -10,6 +10,7 @@
  *   roberth@classea.test    barber
  *   igor@classea.test       barber + admin (the owner: runs the shop and the panel)
  *   anderson@classea.test   barber
+ *   recepcao@classea.test   reception (agenda + baixa, no finance)
  *   cliente@classea.test    client with an active monthly plan and a saved test card
  */
 import { readFileSync } from 'node:fs';
@@ -23,6 +24,7 @@ import {
   SEED_PLANS,
   SEED_SERVICES,
 } from '../shared/defaults';
+import { DEFAULT_FINANCE } from '../shared/finance';
 import { computeDayAvailability, endTime, generateSlots, lockSlices } from '../shared/slots';
 import { addDaysToDateKey, cycleKey, shopNow, shopTimeToDate } from '../shared/time';
 import type { Barber, Role } from '../shared/types';
@@ -80,6 +82,7 @@ async function main() {
   const today = shopNow().date;
 
   await db.doc('settings/shop').set(DEFAULT_SETTINGS);
+  await db.doc('settings/finance').set(DEFAULT_FINANCE);
 
   for (const type of ['privacy', 'terms', 'cookies'] as const) {
     const markdown = readFileSync(new URL(`../shared/legal/${type}.md`, import.meta.url), 'utf8');
@@ -105,6 +108,7 @@ async function main() {
   for (const { id, ...p } of SEED_PLANS) await db.doc(`plans/${id}`).set(p);
 
   await upsertUser('dono@classea.test', 'Dono Classe A', ['admin'], '+5511900000001');
+  await upsertUser('recepcao@classea.test', 'Recepção Classe A', ['reception'], '+5511900000002');
 
   const barberDefs = [
     {
@@ -154,7 +158,8 @@ async function main() {
       bufferMin: 0,
       featured: b.featured ?? false,
       // Firestore rejects undefined values: only the owner carries these fields.
-      ...(b.featured ? { roleLabel: 'Proprietário', photoPosition: '68% center' } : {}),
+      // The owner takes no commission.
+      ...(b.featured ? { roleLabel: 'Proprietário', photoPosition: '68% center', commissionPct: 0 } : {}),
     };
     const { id: _id, ...doc } = barber;
     void _id;

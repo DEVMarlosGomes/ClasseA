@@ -89,3 +89,28 @@ test('Igor (barbeiro e dono) gerencia a rotina e os clientes da equipe', async (
   await expect(page.getByText(/Atendido por/).first()).toBeVisible();
   await auditScreenshot(page, testInfo, 'admin-clients');
 });
+
+test('recepção abre a agenda da equipe e não acessa o financeiro', async ({ page }, testInfo) => {
+  await signInStaff(page, 'recepcao@classea.test');
+  await expect(page).toHaveURL(/\/recepcao$/);
+  await expect(page.getByRole('heading', { name: 'Agenda do dia' })).toBeVisible();
+  await auditScreenshot(page, testInfo, 'reception');
+  await page.goto('/admin/financeiro');
+  await expect(page.getByRole('heading', { name: 'Área exclusiva da equipe' })).toBeVisible();
+});
+
+test('barbeiro vê só a própria comissão', async ({ page }, testInfo) => {
+  await signInStaff(page, 'roberth@classea.test');
+  await page.goto('/barbeiro/financeiro');
+  await expect(page.getByRole('heading', { name: 'Minha comissão' })).toBeVisible();
+  await expect(page.getByText('Comissão da quinzena')).toBeVisible();
+  await auditScreenshot(page, testInfo, 'barber-finance');
+});
+
+test('Igor abre o financeiro da barbearia', async ({ page }, testInfo) => {
+  await signInStaff(page, 'igor@classea.test');
+  await page.goto('/admin/financeiro');
+  await expect(page.getByRole('heading', { name: 'Financeiro' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Regras de comissão' })).toBeVisible();
+  await auditScreenshot(page, testInfo, 'admin-finance');
+});

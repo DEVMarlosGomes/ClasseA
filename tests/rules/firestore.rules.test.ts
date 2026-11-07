@@ -24,6 +24,10 @@ beforeEach(async () => {
       setDoc(doc(db, 'appointments/other'), { clientId: 'client-b', barberId: 'barber-b' }),
       setDoc(doc(db, 'barberClients/barber-a/clients/client-a'), { privateNotes: '', name: 'Cliente A' }),
       setDoc(doc(db, 'barberClients/barber-b/clients/client-b'), { privateNotes: '', name: 'Cliente B' }),
+      setDoc(doc(db, 'commissions/own'), { barberId: 'barber-a', amountCents: 1750 }),
+      setDoc(doc(db, 'commissions/other'), { barberId: 'barber-b', amountCents: 2100 }),
+      setDoc(doc(db, 'settings/finance'), { defaultCommissionPct: 35 }),
+      setDoc(doc(db, 'settings/shop'), { name: 'Classe A' }),
     ]);
   });
 });
@@ -103,5 +107,38 @@ describe('administrator', () => {
     const day = { status: 'closed', blocks: [], extraOpenings: [], updatedAt: serverTimestamp() };
     await assertSucceeds(setDoc(doc(db, 'barbers/barber-b/days/2026-11-10'), { ...day, updatedBy: 'owner' }));
     await assertFails(setDoc(doc(db, 'barbers/barber-b/days/2026-11-11'), { ...day, updatedBy: 'barber-b' }));
+  });
+});
+
+describe('finance and front desk', () => {
+  it('a barber reads only his own commissions; nobody writes them from the browser', async () => {
+    const db = env.authenticatedContext('barber-a', { roles: ['barber'] }).firestore();
+    await assertSucceeds(getDoc(doc(db, 'commissions/own')));
+    await assertFails(getDoc(doc(db, 'commissions/other')));
+    await assertFails(setDoc(doc(db, 'commissions/new'), { barberId: 'barber-a', amountCents: 99999 }));
+  });
+
+  it('the front desk reads the agenda but no commissions, finance settings or payments', async () => {
+    const db = env.authenticatedContext('front', { roles: ['reception'] }).firestore();
+    await assertSucceeds(getDoc(doc(db, 'appointments/other')));
+    await assertFails(getDoc(doc(db, 'commissions/own')));
+    await assertFails(getDoc(doc(db, 'settings/finance')));
+    await assertSucceeds(getDoc(doc(db, 'settings/shop')));
+    await assertFails(setDoc(doc(db, 'appointments/other'), { status: 'completed' }));
+  });
+
+  it('finance settings and payouts belong to the owner', async () => {
+    const barber = env.authenticatedContext('barber-a', { roles: ['barber'] }).firestore();
+    await assertFails(getDoc(doc(barber, 'settings/finance')));
+    await assertFails(setDoc(doc(barber, 'payouts/barber-a_2026-11-A'), { barberId: 'barber-a', amountCents: 1, registeredBy: 'barber-a' }));
+    const owner = env.authenticatedContext('owner', { roles: ['admin'] }).firestore();
+    await assertSucceeds(getDoc(doc(owner, 'settings/finance')));
+    await assertSucceeds(setDoc(doc(owner, 'payouts/barber-a_2026-11-A'), { barberId: 'barber-a', period: '2026-11-A', amountCents: 1750, registeredBy: 'owner' }));
+    await assertSucceeds(getDoc(doc(barber, 'payouts/barber-a_2026-11-A')));
+    await assertFails(setDoc(doc(owner, 'payouts/barber-b_2026-11-A'), { barberId: 'barber-b', period: '2026-11-A', amountCents: 1, registeredBy: 'someone-else' }));
+    // Id must match barber + period, and a barber can check his own period before any payout exists.
+    await assertFails(setDoc(doc(owner, 'payouts/barber-a_2026-11-B'), { barberId: 'barber-b', period: '2026-11-B', amountCents: 1, registeredBy: 'owner' }));
+    await assertSucceeds(getDoc(doc(barber, 'payouts/barber-a_2026-12-A')));
+    await assertFails(getDoc(doc(barber, 'payouts/barber-b_2026-11-A')));
   });
 });

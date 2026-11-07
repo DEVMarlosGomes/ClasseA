@@ -74,7 +74,9 @@ export async function currentCaller(): Promise<Caller | null> {
 
 export function primaryRole(roles: Iterable<Role>): Role {
   const set = new Set(roles);
-  return set.has('admin') ? 'admin' : set.has('barber') ? 'barber' : 'client';
+  if (set.has('admin')) return 'admin';
+  if (set.has('barber')) return 'barber';
+  return set.has('reception') ? 'reception' : 'client';
 }
 
 export const userAgent = () => (typeof navigator !== 'undefined' ? navigator.userAgent : '').slice(0, 300);

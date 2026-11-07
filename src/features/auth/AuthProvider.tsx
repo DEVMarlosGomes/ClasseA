@@ -49,7 +49,7 @@ const AuthContext = createContext<AuthState | null>(null);
 function rolesFromClaims(claims: Record<string, unknown>): Role[] {
   const roles = claims.roles;
   if (Array.isArray(roles))
-    return roles.filter((r): r is Role => r === 'client' || r === 'barber' || r === 'admin');
+    return roles.filter((r): r is Role => r === 'client' || r === 'barber' || r === 'admin' || r === 'reception');
   return [];
 }
 

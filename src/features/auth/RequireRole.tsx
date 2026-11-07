@@ -7,9 +7,12 @@ import { Halo } from '@/components/ui/Orbs';
 import { FullPageLoader } from '@/components/ui/RazorLoader';
 import { useAuthNow } from './AuthProvider';
 
-const LOGIN_FOR: Record<Role, string> = { client: '/entrar', barber: '/barbeiro/login', admin: '/barbeiro/login' };
+const LOGIN_FOR: Record<Role, string> = { client: '/entrar', barber: '/barbeiro/login', admin: '/barbeiro/login', reception: '/barbeiro/login' };
 
-export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
+/** `role` may list several roles: any of them grants access (e.g. the front desk page for reception or admin). */
+export function RequireRole({ role: roleOrList, children }: { role: Role | Role[]; children: ReactNode }) {
+  const allowed = Array.isArray(roleOrList) ? roleOrList : [roleOrList];
+  const role = allowed[0]!;
   const { ready, user, roles, profilePending } = useAuthNow();
   const location = useLocation();
 
@@ -20,7 +23,7 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
   }
   // A signed-in user with no roles yet (e.g. Google sign-in without profile) completes sign-up first.
   if (roles.length === 0 && role === 'client') return <Navigate to="/cadastro?completar=1" replace />;
-  if (!roles.includes(role)) return <Forbidden role={role} />;
+  if (!allowed.some((r) => roles.includes(r))) return <Forbidden role={role} />;
   return <>{children}</>;
 }
 

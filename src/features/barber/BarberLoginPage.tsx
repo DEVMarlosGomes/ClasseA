@@ -21,8 +21,9 @@ export default function BarberLoginPage() {
   const [shown, setShown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const form = useForm<z.input<typeof signInSchema>>({ resolver: zodResolver(signInSchema), defaultValues: { email: '', password: '' } });
-  const staff = roles.includes('barber') || roles.includes('admin');
-  const target = safeNext(params.get('next'), roles.includes('barber') ? '/barbeiro' : '/admin');
+  const staff = roles.includes('barber') || roles.includes('admin') || roles.includes('reception');
+  const home = roles.includes('barber') ? '/barbeiro' : roles.includes('admin') ? '/admin' : '/recepcao';
+  const target = safeNext(params.get('next'), home);
 
   useEffect(() => {
     if (ready && user && staff) navigate(target, { replace: true });

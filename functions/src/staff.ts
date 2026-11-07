@@ -1,6 +1,6 @@
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { DEFAULT_TEMPLATE } from '../../shared/defaults';
-import { createBarberSchema, setUserRoleSchema } from '../../shared/schemas';
+import { createBarberSchema, createReceptionSchema, setUserRoleSchema } from '../../shared/schemas';
 import type { Role } from '../../shared/types';
 import { OCCUPYING, recomputeAvailability } from './availability';
 import { FieldValue, IS_EMULATOR, REGION, auth, db } from './lib/admin';
@@ -8,7 +8,9 @@ import { callable, fail } from './lib/callable';
 import { notify } from './notify';
 
 function primaryRole(roles: Role[]): Role {
-  return roles.includes('admin') ? 'admin' : roles.includes('barber') ? 'barber' : 'client';
+  if (roles.includes('admin')) return 'admin';
+  if (roles.includes('barber')) return 'barber';
+  return roles.includes('reception') ? 'reception' : 'client';
 }
 
 /** Admin only. Roles live in the `roles` custom claim; users/{uid}.role mirrors it for the UI. */
@@ -66,6 +68,37 @@ export const createBarber = callable(
       email: input.email,
       title: 'Bem-vindo à equipe Classe A',
       body: `Sua conta de barbeiro foi criada. Defina sua senha neste link: ${link}`,
+      link: '/barbeiro/login',
+    });
+    return { uid: user.uid, inviteLink: IS_EMULATOR ? link : null };
+  },
+  { roles: ['admin'] },
+);
+
+/** Creates a front-desk account (agenda + "dar baixa", no finance) and e-mails a password link. */
+export const createReception = callable(
+  createReceptionSchema,
+  async (input) => {
+    let user;
+    try {
+      user = await auth.getUserByEmail(input.email);
+    } catch {
+      user = await auth.createUser({ email: input.email, displayName: input.name, emailVerified: false });
+    }
+    const roles = new Set<Role>((user.customClaims?.roles as Role[] | undefined) ?? []);
+    roles.add('reception');
+    await auth.setCustomUserClaims(user.uid, { ...(user.customClaims ?? {}), roles: [...roles] });
+    await db.doc(`roles/${user.uid}`).set({ roles: [...roles] }, { merge: true });
+    await db.doc(`users/${user.uid}`).set(
+      { name: input.name, email: input.email, phone: '', role: primaryRole([...roles]), roles: [...roles], createdAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+    const link = await auth.generatePasswordResetLink(input.email);
+    await notify({
+      uid: user.uid,
+      email: input.email,
+      title: 'Acesso da recepção — Classe A',
+      body: `Seu acesso à recepção foi criado. Defina sua senha neste link: ${link}`,
       link: '/barbeiro/login',
     });
     return { uid: user.uid, inviteLink: IS_EMULATOR ? link : null };

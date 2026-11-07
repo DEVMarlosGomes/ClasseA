@@ -1,4 +1,4 @@
-import { CalendarRange, Clock3, LogOut, UserRound, Users } from 'lucide-react';
+import { CalendarRange, Clock3, LogOut, UserRound, Users, Wallet } from 'lucide-react';
 import { Link, Outlet, useNavigate } from 'react-router';
 import { Logo } from '@/components/ui/Logo';
 import { Orbs } from '@/components/ui/Orbs';
@@ -28,6 +28,7 @@ function BarberShell() {
     { to: '/barbeiro', label: 'Hoje', icon: Clock3, end: true, badge: remaining || undefined },
     { to: '/barbeiro/agenda', label: 'Agenda', icon: CalendarRange },
     { to: '/barbeiro/clientes', label: 'Clientes', icon: Users },
+    { to: '/barbeiro/financeiro', label: 'Comissão', icon: Wallet },
     { to: '/barbeiro/perfil', label: 'Perfil', icon: UserRound },
   ];
 

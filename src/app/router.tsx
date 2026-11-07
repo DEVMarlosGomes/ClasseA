@@ -35,6 +35,7 @@ const routes: RouteObject[] = [
         ],
       },
       { path: 'barbeiro/login', ...page(() => import('@/features/barber/BarberLoginPage')) },
+      { path: 'recepcao', ...page(() => import('@/features/reception/ReceptionPage')) },
       {
         path: 'barbeiro',
         ...page(() => import('@/features/barber/BarberLayout')),
@@ -44,6 +45,7 @@ const routes: RouteObject[] = [
           { path: 'clientes', ...page(() => import('@/features/barber/BarberClientsPage')) },
           { path: 'clientes/:id', ...page(() => import('@/features/barber/BarberClientDetailPage')) },
           { path: 'perfil', ...page(() => import('@/features/barber/BarberProfilePage')) },
+          { path: 'financeiro', ...page(() => import('@/features/finance/BarberFinancePage')) },
         ],
       },
       {
@@ -57,6 +59,7 @@ const routes: RouteObject[] = [
           { path: 'servicos', ...page(() => import('@/features/admin/AdminServicesPage')) },
           { path: 'planos', ...page(() => import('@/features/admin/AdminPlansPage')) },
           { path: 'assinaturas', ...page(() => import('@/features/admin/AdminSubscriptionsPage')) },
+          { path: 'financeiro', ...page(() => import('@/features/finance/AdminFinancePage')) },
           { path: 'documentos', ...page(() => import('@/features/admin/AdminLegalPage')) },
           { path: 'configuracoes', ...page(() => import('@/features/admin/AdminSettingsPage')) },
         ],
