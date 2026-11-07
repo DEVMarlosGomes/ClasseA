@@ -170,7 +170,9 @@ As **anotações privadas** dos barbeiros sobre clientes (`privateNotes`) hoje s
   - webhook `mpWebhook`: valida `x-signature` com o validador do SDK, reconsulta o recurso na API, idempotente, log em `webhookEvents`;
   - reconciliação diária: assinatura cancelada no MP sem webhook é encerrada; carência de 10 dias (janela de retentativa do MP);
   - com o MP ligado, cartão no agendamento avulso fica indisponível até a fase 2b (o cliente usa PIX ou paga na barbearia).
-- **Fase 2b (a fazer):** front-end — Card Payment Brick no lugar do `CardForm`, QR real no `PixPanel`, esconder cartão no agendamento, renomear `card_mock`/`pix_mock` na API.
+- **Fase 2b / F4 (2026-11-07):** front do plano recorrente com o **Card Payment Brick** oficial (`@mercadopago/sdk-react` 1.0.7, carregado só na assinatura): crédito, 1 parcela, token de uso único enviado como `cardToken` ao `subscribePlan`; recusa pede o cartão de novo. Ligado só sem Spark, com `VITE_RECURRING_PAYMENTS=mercadopago` + `VITE_MP_PUBLIC_KEY` no front e `PAYMENTS_PROVIDER=mercadopago` nas Functions. Com qualquer gateway real ligado, o aviso "demonstração", o cartão/PIX simulados e os "cartões salvos" somem.
+  - PIX dos planos: o PIX avulso agora é da InfinitePay (ver [PLANO-FINANCEIRO-INFINITEPAY.md](PLANO-FINANCEIRO-INFINITEPAY.md)); plano à vista pela InfinitePay ainda não foi feito, então com o Mercado Pago ligado os planos são só no cartão recorrente.
+  - Renomear `card_mock`/`pix_mock` na API continua pendente (só nomes internos).
 
 ### Como ligar no sandbox (depois do Blaze)
 

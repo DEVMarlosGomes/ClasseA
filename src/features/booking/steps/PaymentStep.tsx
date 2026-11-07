@@ -7,7 +7,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/components/ui/Toast';
 import { cn } from '@/lib/cn';
-import { ONLINE_PAYMENTS } from '@/lib/payments';
+import { ONLINE_PAYMENTS, REAL_PAYMENTS } from '@/lib/payments';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { CardForm } from '@/features/payments/CardForm';
 import { DemoNotice } from '@/features/payments/DemoNotice';
@@ -116,19 +116,21 @@ export function PaymentStep() {
         title="Pagar na barbearia"
         description={`${formatBRL(totalCents)} no dia, em dinheiro, cartão ou PIX`}
       />
-      {ONLINE_PAYMENTS ? (
-        <Option
-          selected={paymentMode === 'online'}
-          onClick={() => choose('online')}
-          icon={<ShieldCheck className="size-5" strokeWidth={1.5} />}
-          title="Pagar agora online"
-          description={`${formatBRL(totalCents)} no PIX ou cartão em até 12x, na página segura da InfinitePay`}
-        >
-          <p className="text-[13px] leading-relaxed text-text-400">
-            Ao confirmar, você vai para a InfinitePay e volta para cá. O horário fica reservado por 20 minutos
-            enquanto você paga.
-          </p>
-        </Option>
+      {REAL_PAYMENTS ? (
+        ONLINE_PAYMENTS && (
+          <Option
+            selected={paymentMode === 'online'}
+            onClick={() => choose('online')}
+            icon={<ShieldCheck className="size-5" strokeWidth={1.5} />}
+            title="Pagar agora online"
+            description={`${formatBRL(totalCents)} no PIX ou cartão em até 12x, na página segura da InfinitePay`}
+          >
+            <p className="text-[13px] leading-relaxed text-text-400">
+              Ao confirmar, você vai para a InfinitePay e volta para cá. O horário fica reservado por 20
+              minutos enquanto você paga.
+            </p>
+          </Option>
+        )
       ) : (
         <>
           <Option

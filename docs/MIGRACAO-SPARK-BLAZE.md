@@ -19,7 +19,7 @@ Até o passo 6, dá para voltar atrás só trocando a variável `VITE_SPARK` de 
 - [ ] Plano **Blaze** ativo e **alerta de orçamento** configurado (Google Cloud Console → Faturamento → Orçamentos e alertas → R$ 20/mês).
 - [ ] Todo o código enviado ao GitHub (`git push`).
 - [ ] Uma **chave de conta de serviço nova**, salva fora do projeto (Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada). **Não use a chave que foi colada no chat; revogue-a.**
-- [ ] Firebase CLI atualizada e logada: `firebase login` (você já está como marlosg.nexus@gmail.com).
+- [ ] Firebase CLI: use **`npx firebase`** (a do projeto). O `firebase` global não está no PATH desta máquina. Login: `npx firebase login`.
 - [ ] Opcional: backup do Firestore (Firebase Console → Firestore → Importar/exportar).
 
 Em todos os comandos abaixo, use o **PowerShell na pasta do projeto**.
@@ -51,7 +51,7 @@ Isso não muda nada no site atual: o Spark continua lendo `roles/{uid}`. Pode ro
 
 ```powershell
 npm run functions:build
-firebase deploy --only functions --project classea-97dd2
+npx firebase deploy --only functions --project classea-97dd2
 ```
 
 - Na primeira vez, o Firebase pede para ativar APIs (Cloud Build, Artifact Registry, Cloud Run, Eventarc, Cloud Scheduler). Aceite.
@@ -61,7 +61,7 @@ firebase deploy --only functions --project classea-97dd2
 ## 4. Publicar índices e regras do Storage
 
 ```powershell
-firebase deploy --only firestore:indexes,storage --project classea-97dd2
+npx firebase deploy --only firestore:indexes,storage --project classea-97dd2
 ```
 
 Os índices levam alguns minutos para ficar prontos (Firebase Console → Firestore → Índices → todos "Ativado").
@@ -89,7 +89,7 @@ Se algo falhar: volte `VITE_SPARK=true` + Redeploy (o site volta ao Spark como e
 ## 7. Publicar as regras de produção (o passo que fecha a segurança)
 
 ```powershell
-firebase deploy --only firestore:rules --project classea-97dd2
+npx firebase deploy --only firestore:rules --project classea-97dd2
 ```
 
 Usa o `firestore.rules` (o de produção). A partir daqui, o navegador não grava mais agendamentos, pagamentos, comissões nem papéis: só as Functions gravam.
@@ -98,7 +98,7 @@ Usa o `firestore.rules` (o de produção). A partir daqui, o navegador não grav
 
 Repita a lista do passo 6. Atenção especial a: barbeiro **não** ver comissão de outro barbeiro, recepção **não** abrir Financeiro, cliente agendando e cancelando.
 
-**Voltar atrás depois do passo 7:** `firebase deploy --config firebase.spark.json --only firestore:rules --project classea-97dd2` + `VITE_SPARK=true` + Redeploy.
+**Voltar atrás depois do passo 7:** `npx firebase deploy --config firebase.spark.json --only firestore:rules --project classea-97dd2` + `VITE_SPARK=true` + Redeploy.
 
 ---
 

@@ -16,6 +16,7 @@ import { call, errorMessage } from '@/lib/api';
 import { formatInstant } from '@/lib/dates';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useMyPaymentMethods } from '@/features/plans/hooks';
+import { REAL_PAYMENTS } from '@/lib/payments';
 import { CardForm } from './CardForm';
 import { DemoNotice } from './DemoNotice';
 
@@ -51,7 +52,13 @@ function SavedCard({ card }: { card: PaymentMethod }) {
             Definir como padrão
           </Button>
         )}
-        <Button size="sm" variant="ghost" loading={busy === 'remove'} icon={<Trash2 className="size-4" strokeWidth={1.5} />} onClick={() => void run('remove')}>
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={busy === 'remove'}
+          icon={<Trash2 className="size-4" strokeWidth={1.5} />}
+          onClick={() => void run('remove')}
+        >
           Remover
         </Button>
       </div>
@@ -72,8 +79,15 @@ export default function ClientPaymentsPage() {
   const { user } = useAuth();
   const cards = useMyPaymentMethods(user?.uid);
   const [adding, setAdding] = useState(false);
-  const payments = useLiveQuery<Payment>(user ? `pays:${user.uid}` : null, ({ db, collection, query, where, orderBy, limit }) =>
-    query(collection(db, 'payments'), where('clientId', '==', user!.uid), orderBy('createdAt', 'desc'), limit(30)),
+  const payments = useLiveQuery<Payment>(
+    user ? `pays:${user.uid}` : null,
+    ({ db, collection, query, where, orderBy, limit }) =>
+      query(
+        collection(db, 'payments'),
+        where('clientId', '==', user!.uid),
+        orderBy('createdAt', 'desc'),
+        limit(30),
+      ),
   );
 
   return (
@@ -85,43 +99,54 @@ export default function ClientPaymentsPage() {
         </div>
       </div>
 
-      <section aria-labelledby="cards-title">
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="cards-title" className="font-label text-[18px] text-text-100">
-            Cartões salvos
-          </h2>
-          <Button size="sm" variant="secondary" icon={<Plus className="size-4" strokeWidth={1.75} />} onClick={() => setAdding(true)}>
-            Adicionar
-          </Button>
-        </div>
-        <div className="mt-4">
-          {cards.error ? (
-            <ErrorState />
-          ) : cards.loading ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Skeleton className="h-40 rounded-[18px]" />
-            </div>
-          ) : cards.data?.length ? (
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {cards.data.map((c) => (
-                <SavedCard key={c.id} card={c} />
-              ))}
-            </ul>
-          ) : (
-            <div className="panel">
-              <EmptyState
-                title="Nenhum cartão salvo"
-                description="Salve um cartão para pagar online e assinar planos com renovação automática."
-                action={
-                  <Button icon={<CreditCard className="size-4" strokeWidth={1.75} />} onClick={() => setAdding(true)}>
-                    Adicionar cartão
-                  </Button>
-                }
-              />
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Saved cards belong to the simulated gateway; real payments never store cards here. */}
+      {!REAL_PAYMENTS && (
+        <section aria-labelledby="cards-title">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="cards-title" className="font-label text-[18px] text-text-100">
+              Cartões salvos
+            </h2>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Plus className="size-4" strokeWidth={1.75} />}
+              onClick={() => setAdding(true)}
+            >
+              Adicionar
+            </Button>
+          </div>
+          <div className="mt-4">
+            {cards.error ? (
+              <ErrorState />
+            ) : cards.loading ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-40 rounded-[18px]" />
+              </div>
+            ) : cards.data?.length ? (
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {cards.data.map((c) => (
+                  <SavedCard key={c.id} card={c} />
+                ))}
+              </ul>
+            ) : (
+              <div className="panel">
+                <EmptyState
+                  title="Nenhum cartão salvo"
+                  description="Salve um cartão para pagar online e assinar planos com renovação automática."
+                  action={
+                    <Button
+                      icon={<CreditCard className="size-4" strokeWidth={1.75} />}
+                      onClick={() => setAdding(true)}
+                    >
+                      Adicionar cartão
+                    </Button>
+                  }
+                />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="hist-title">
         <h2 id="hist-title" className="font-label text-[18px] text-text-100">
@@ -141,18 +166,24 @@ export default function ClientPaymentsPage() {
                   <div className="min-w-0">
                     <p className="text-[15px] text-text-100">{p.description}</p>
                     <p className="tabular text-[13px] text-text-400">
-                      {p.createdAt ? formatInstant(p.createdAt.toDate()) : '—'} · {p.method === 'pix_mock' || p.method === 'pix' ? 'PIX' : 'Cartão'} · {p.gatewayRef}
+                      {p.createdAt ? formatInstant(p.createdAt.toDate()) : '—'} ·{' '}
+                      {p.method === 'pix_mock' || p.method === 'pix' ? 'PIX' : 'Cartão'} · {p.gatewayRef}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="tabular text-[15px] font-bold text-text-100">{formatBRL(p.amountCents)}</span>
+                    <span className="tabular text-[15px] font-bold text-text-100">
+                      {formatBRL(p.amountCents)}
+                    </span>
                     <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <EmptyState title="Nenhuma cobrança ainda" description="Pagamentos online e cobranças de plano aparecem aqui." />
+            <EmptyState
+              title="Nenhuma cobrança ainda"
+              description="Pagamentos online e cobranças de plano aparecem aqui."
+            />
           )}
         </div>
       </section>

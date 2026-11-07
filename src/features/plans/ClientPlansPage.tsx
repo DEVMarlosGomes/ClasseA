@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { CreditCard, QrCode } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { BRAND_LABEL } from '@shared/cards';
 import { PERIOD_MONTHS } from '@shared/defaults';
@@ -20,24 +20,38 @@ import { useLiveQuery } from '@/hooks/useFirestore';
 import { call, errorMessage } from '@/lib/api';
 import { usePlans } from '@/lib/catalog';
 import { cn } from '@/lib/cn';
+import { RECURRING_MP } from '@/lib/payments';
 import { formatInstant } from '@/lib/dates';
 import { EASE } from '@/lib/motion';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { CardForm } from '@/features/payments/CardForm';
 import { DemoNotice } from '@/features/payments/DemoNotice';
+import type { MpCard } from '@/features/payments/MpCardBrick';
 import { PixPanel } from '@/features/payments/PixPanel';
+
+// Mercado Pago's script loads only when a client opens the card step of a real subscription.
+const MpCardBrick = lazy(() => import('@/features/payments/MpCardBrick'));
 import { PlanCard, PERIOD_LABEL, planSavings } from './PlanCard';
 import { useMyPaymentMethods, useMySubscription } from './hooks';
 
 type Step = 'method' | 'review' | 'done';
 
-function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly?: Plan; onClose: () => void }) {
+function SubscribeSheet({
+  plan,
+  monthly,
+  onClose,
+}: {
+  plan: Plan | null;
+  monthly?: Plan;
+  onClose: () => void;
+}) {
   const { user } = useAuth();
   const cards = useMyPaymentMethods(user?.uid);
   const [step, setStep] = useState<Step>('method');
   const [method, setMethod] = useState<'card_mock' | 'pix_mock'>('card_mock');
   const [cardId, setCardId] = useState<string | null>(null);
   const [pixId, setPixId] = useState<string | null>(null);
+  const [mpCard, setMpCard] = useState<MpCard | null>(null);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [declined, setDeclined] = useState<string | null>(null);
@@ -46,6 +60,7 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
     if (plan) {
       setStep('method');
       setPixId(null);
+      setMpCard(null);
       setDeclined(null);
     }
   }, [plan]);
@@ -56,7 +71,7 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
   if (!plan) return null;
   const months = PERIOD_MONTHS[plan.period];
   const savings = planSavings(plan, monthly);
-  const canReview = method === 'card_mock' ? !!cardId : !!pixId;
+  const canReview = RECURRING_MP ? !!mpCard : method === 'card_mock' ? !!cardId : !!pixId;
 
   const confirm = async () => {
     setBusy(true);
@@ -64,13 +79,20 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
     try {
       await call('subscribePlan', {
         planId: plan.id,
-        method,
-        paymentMethodId: method === 'card_mock' ? cardId : undefined,
-        pixChargeId: method === 'pix_mock' ? pixId : undefined,
+        method: RECURRING_MP ? 'card_mock' : method,
+        paymentMethodId: !RECURRING_MP && method === 'card_mock' ? cardId : undefined,
+        pixChargeId: !RECURRING_MP && method === 'pix_mock' ? pixId : undefined,
+        // Mercado Pago: single-use token from the Card Payment Brick (the card never reaches us).
+        cardToken: RECURRING_MP ? mpCard?.token : undefined,
       });
       setStep('done');
     } catch (e) {
       setDeclined(errorMessage(e));
+      // A Mercado Pago token works once: ask for the card again after a refusal.
+      if (RECURRING_MP) {
+        setMpCard(null);
+        setStep('method');
+      }
     } finally {
       setBusy(false);
     }
@@ -81,7 +103,13 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
       open={!!plan}
       onOpenChange={(o) => !o && onClose()}
       title={step === 'done' ? 'Plano ativo' : `Assinar plano ${plan.name}`}
-      description={step === 'method' ? 'Escolha como pagar.' : step === 'review' ? 'Confira antes de confirmar.' : undefined}
+      description={
+        step === 'method'
+          ? 'Escolha como pagar.'
+          : step === 'review'
+            ? 'Confira antes de confirmar.'
+            : undefined
+      }
       footer={
         step === 'method' ? (
           <Button block size="lg" disabled={!canReview} onClick={() => setStep('review')}>
@@ -103,7 +131,42 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
         )
       }
     >
-      {step === 'method' && (
+      {step === 'method' && RECURRING_MP && (
+        <div className="space-y-4">
+          {declined && (
+            <p
+              role="alert"
+              className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-[14px] text-text-100"
+            >
+              {declined}
+            </p>
+          )}
+          {mpCard ? (
+            <p className="rounded-[14px] border border-success/40 bg-success/10 p-4 text-[14px] text-text-100">
+              Cartão {mpCard.last4 ? `final ${mpCard.last4} ` : ''}pronto.{' '}
+              <button onClick={() => setMpCard(null)} className="font-label text-gold-400 underline">
+                Usar outro
+              </button>
+            </p>
+          ) : (
+            <Suspense fallback={<Skeleton className="h-72 rounded-[16px]" />}>
+              <MpCardBrick
+                amountCents={plan.priceCents}
+                email={user?.email ?? undefined}
+                onToken={(card) => {
+                  setMpCard(card);
+                  setStep('review');
+                }}
+              />
+            </Suspense>
+          )}
+          <p className="text-[13px] text-text-400">
+            Pagamento processado pelo Mercado Pago. A Classe A não vê nem guarda os dados do seu cartão.
+          </p>
+        </div>
+      )}
+
+      {step === 'method' && !RECURRING_MP && (
         <div className="space-y-4">
           <DemoNotice />
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Forma de pagamento">
@@ -120,7 +183,9 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
                 onClick={() => setMethod(m)}
                 className={cn(
                   'flex min-h-14 items-center justify-center gap-2 rounded-[14px] border text-[15px] font-bold',
-                  method === m ? 'border-gold-500 bg-gold-500/10 text-gold-400' : 'border-ink-600 text-text-100 hover:border-gold-700',
+                  method === m
+                    ? 'border-gold-500 bg-gold-500/10 text-gold-400'
+                    : 'border-ink-600 text-text-100 hover:border-gold-700',
                 )}
               >
                 <Icon className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -157,14 +222,19 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
                   </li>
                 ))}
                 <li>
-                  <button onClick={() => setAdding(true)} className="font-label min-h-11 text-[14px] text-gold-400 underline">
+                  <button
+                    onClick={() => setAdding(true)}
+                    className="font-label min-h-11 text-[14px] text-gold-400 underline"
+                  >
                     Usar outro cartão
                   </button>
                 </li>
               </ul>
             )
           ) : pixId ? (
-            <p className="rounded-[14px] border border-success/40 bg-success/10 p-4 text-[14px] text-text-100">PIX aprovado. Revise e confirme.</p>
+            <p className="rounded-[14px] border border-success/40 bg-success/10 p-4 text-[14px] text-text-100">
+              PIX aprovado. Revise e confirme.
+            </p>
           ) : (
             <PixPanel request={{ purpose: 'subscription', planId: plan.id }} onPaid={setPixId} />
           )}
@@ -176,13 +246,24 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
           <DemoNotice />
           <dl className="panel divide-y divide-white/5 px-5 text-[15px]">
             {[
-              ['Plano', `${plan.name} · ${plan.cutsPerMonth == null ? 'cortes ilimitados' : `${plan.cutsPerMonth} cortes por mês`}`],
+              [
+                'Plano',
+                `${plan.name} · ${plan.cutsPerMonth == null ? 'cortes ilimitados' : `${plan.cutsPerMonth} cortes por mês`}`,
+              ],
               ['Valor total', `${formatBRL(plan.priceCents)} ${PERIOD_LABEL[plan.period]}`],
-              ['Equivale a', `${formatBRL(plan.monthlyEquivalentCents)} por mês${savings ? ` · ${savings}% de economia` : ''}`],
-              ['Cobrança', `Hoje, ${method === 'card_mock' ? 'no cartão' : 'via PIX (já aprovado)'}`],
+              [
+                'Equivale a',
+                `${formatBRL(plan.monthlyEquivalentCents)} por mês${savings ? ` · ${savings}% de economia` : ''}`,
+              ],
+              [
+                'Cobrança',
+                RECURRING_MP
+                  ? `No cartão${mpCard?.last4 ? ` final ${mpCard.last4}` : ''}, em até 1 hora, pelo Mercado Pago`
+                  : `Hoje, ${method === 'card_mock' ? 'no cartão' : 'via PIX (já aprovado)'}`,
+              ],
               [
                 'Renovação',
-                method === 'card_mock'
+                RECURRING_MP || method === 'card_mock'
                   ? `Automática a cada ${months === 1 ? 'mês' : `${months} meses`}, com aviso 3 dias antes`
                   : 'Manual (PIX não renova sozinho)',
               ],
@@ -200,7 +281,10 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
             <li>Direito de arrependimento: desista em até 7 dias e receba o valor de volta.</li>
           </ul>
           {declined && (
-            <p role="alert" className="rounded-[14px] border border-danger/40 bg-danger/10 p-4 text-[14px] text-[#f4a49d]">
+            <p
+              role="alert"
+              className="rounded-[14px] border border-danger/40 bg-danger/10 p-4 text-[14px] text-[#f4a49d]"
+            >
               {declined}
             </p>
           )}
@@ -211,7 +295,9 @@ function SubscribeSheet({ plan, monthly, onClose }: { plan: Plan | null; monthly
         <div className="flex flex-col items-center py-6 text-center">
           <SuccessCheck />
           <p className="font-label mt-6 text-[22px] text-text-100">Bem-vindo ao plano {plan.name}</p>
-          <p className="mt-2 max-w-[34ch] text-[15px] text-text-400">Seus cortes já estão disponíveis. Agende escolhendo "Usar meu plano".</p>
+          <p className="mt-2 max-w-[34ch] text-[15px] text-text-400">
+            Seus cortes já estão disponíveis. Agende escolhendo "Usar meu plano".
+          </p>
         </div>
       )}
     </Sheet>
@@ -224,8 +310,16 @@ function ManagePlan() {
   const plans = usePlans();
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const payments = useLiveQuery<Payment>(user && sub ? `subpay:${sub.id}` : null, ({ db, collection, query, where, orderBy, limit }) =>
-    query(collection(db, 'payments'), where('clientId', '==', user!.uid), where('subscriptionId', '==', sub!.id), orderBy('createdAt', 'desc'), limit(12)),
+  const payments = useLiveQuery<Payment>(
+    user && sub ? `subpay:${sub.id}` : null,
+    ({ db, collection, query, where, orderBy, limit }) =>
+      query(
+        collection(db, 'payments'),
+        where('clientId', '==', user!.uid),
+        where('subscriptionId', '==', sub!.id),
+        orderBy('createdAt', 'desc'),
+        limit(12),
+      ),
   );
   if (!sub) return null;
   const pct = usage?.total ? Math.min(100, (usage.used / usage.total) * 100) : 0;
@@ -251,31 +345,55 @@ function ManagePlan() {
           <p className="font-label text-[14px] text-gold-500">Seu plano</p>
           <h2 className="font-label text-[32px] leading-tight text-text-100">{sub.planName}</h2>
         </div>
-        {sub.status === 'past_due' ? <Badge tone="danger">Pagamento pendente</Badge> : sub.autoRenew ? <Badge tone="success">Renovação automática</Badge> : <Badge tone="neutral">Sem renovação</Badge>}
+        {sub.status === 'past_due' ? (
+          <Badge tone="danger">Pagamento pendente</Badge>
+        ) : sub.autoRenew ? (
+          <Badge tone="success">Renovação automática</Badge>
+        ) : (
+          <Badge tone="neutral">Sem renovação</Badge>
+        )}
       </div>
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div>
           <p className="tabular text-[16px] text-text-100">
-            {usage?.total != null ? `${usage.used} de ${usage.total} cortes usados neste mês` : 'Cortes ilimitados'}
+            {usage?.total != null
+              ? `${usage.used} de ${usage.total} cortes usados neste mês`
+              : 'Cortes ilimitados'}
           </p>
           {usage?.total != null && (
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink-700">
-              <motion.div className="gold-metal h-full origin-left" initial={{ scaleX: 0 }} animate={{ scaleX: pct / 100 }} transition={{ duration: 0.8, ease: EASE }} />
+              <motion.div
+                className="gold-metal h-full origin-left"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: pct / 100 }}
+                transition={{ duration: 0.8, ease: EASE }}
+              />
             </div>
           )}
           <p className="tabular mt-3 text-[14px] text-text-400">
-            Ciclo atual: {formatInstant(sub.currentPeriodStart.toDate(), 'dd/MM/yyyy')} a {formatInstant(sub.currentPeriodEnd.toDate(), 'dd/MM/yyyy')}
+            Ciclo atual: {formatInstant(sub.currentPeriodStart.toDate(), 'dd/MM/yyyy')} a{' '}
+            {formatInstant(sub.currentPeriodEnd.toDate(), 'dd/MM/yyyy')}
           </p>
-          {pending && <p className="mt-2 text-[14px] text-gold-400">Muda para {pending.name} na próxima renovação.</p>}
+          {pending && (
+            <p className="mt-2 text-[14px] text-gold-400">Muda para {pending.name} na próxima renovação.</p>
+          )}
         </div>
         <div className="space-y-2">
           <Switch
             label="Renovação automática"
-            description={sub.autoRenew ? 'Renova no cartão cadastrado no fim do período.' : `Seu acesso vai até ${formatInstant(sub.currentPeriodEnd.toDate(), 'dd/MM/yyyy')}.`}
+            description={
+              sub.autoRenew
+                ? 'Renova no cartão cadastrado no fim do período.'
+                : `Seu acesso vai até ${formatInstant(sub.currentPeriodEnd.toDate(), 'dd/MM/yyyy')}.`
+            }
             checked={sub.autoRenew}
             disabled={busy === 'renew'}
             onCheckedChange={(v) =>
-              void run('renew', () => call('setAutoRenew', { subscriptionId: sub.id, autoRenew: v }), v ? 'Renovação ligada.' : 'Renovação desligada. Você mantém o acesso até o fim do período.')
+              void run(
+                'renew',
+                () => call('setAutoRenew', { subscriptionId: sub.id, autoRenew: v }),
+                v ? 'Renovação ligada.' : 'Renovação desligada. Você mantém o acesso até o fim do período.',
+              )
             }
           />
           <div className="flex flex-wrap gap-2 pt-2">
@@ -287,13 +405,22 @@ function ManagePlan() {
                   size="sm"
                   variant="secondary"
                   loading={busy === p.id}
-                  onClick={() => void run(p.id, () => call('changePlan', { planId: p.id }), `Troca para ${p.name} agendada para a próxima renovação.`)}
+                  onClick={() =>
+                    void run(
+                      p.id,
+                      () => call('changePlan', { planId: p.id }),
+                      `Troca para ${p.name} agendada para a próxima renovação.`,
+                    )
+                  }
                 >
                   Trocar para {p.name}
                 </Button>
               ))}
           </div>
-          <button onClick={() => setCancelOpen(true)} className="font-label min-h-11 text-[13px] text-[#f4a49d] underline">
+          <button
+            onClick={() => setCancelOpen(true)}
+            className="font-label min-h-11 text-[13px] text-[#f4a49d] underline"
+          >
             Cancelar assinatura
           </button>
         </div>
@@ -304,11 +431,15 @@ function ManagePlan() {
       <ul className="mt-3 divide-y divide-white/5 text-[14px]">
         {payments.data?.map((p) => (
           <li key={p.id} className="tabular flex items-center justify-between gap-3 py-3">
-            <span className="text-text-100">{p.createdAt ? formatInstant(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</span>
+            <span className="text-text-100">
+              {p.createdAt ? formatInstant(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}
+            </span>
             <span className="text-text-400">{p.description}</span>
             <span className="flex items-center gap-2">
               {formatBRL(p.amountCents)}
-              <Badge tone={p.status === 'approved' ? 'success' : p.status === 'refunded' ? 'neutral' : 'danger'}>
+              <Badge
+                tone={p.status === 'approved' ? 'success' : p.status === 'refunded' ? 'neutral' : 'danger'}
+              >
                 {p.status === 'approved' ? 'Aprovado' : p.status === 'refunded' ? 'Estornado' : 'Recusado'}
               </Badge>
             </span>
@@ -336,9 +467,11 @@ function ManagePlan() {
               variant="danger"
               loading={busy === 'cancel'}
               onClick={() =>
-                void run('cancel', () => call('cancelSubscription', { subscriptionId: sub.id }), withinWithdrawal ? 'Assinatura cancelada e valor estornado.' : 'Renovação desligada.').then(() =>
-                  setCancelOpen(false),
-                )
+                void run(
+                  'cancel',
+                  () => call('cancelSubscription', { subscriptionId: sub.id }),
+                  withinWithdrawal ? 'Assinatura cancelada e valor estornado.' : 'Renovação desligada.',
+                ).then(() => setCancelOpen(false))
               }
             >
               Cancelar assinatura
@@ -373,7 +506,9 @@ export default function ClientPlansPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-label text-[36px] leading-tight text-text-100">Planos</h1>
-        <p className="mt-2 max-w-[52ch] text-[16px] text-text-400">Corte em dia com valor fixo. Os cortes renovam todo mês.</p>
+        <p className="mt-2 max-w-[52ch] text-[16px] text-text-400">
+          Corte em dia com valor fixo. Os cortes renovam todo mês.
+        </p>
       </div>
       {loading ? <Skeleton className="h-64 rounded-[20px]" /> : <ManagePlan />}
       {plans.isError ? (
@@ -390,7 +525,11 @@ export default function ClientPlansPage() {
                     current={sub?.planId === p.id}
                     action={
                       sub ? null : (
-                        <Button block variant={p.highlight ? 'primary' : 'secondary'} onClick={() => setSelected(p)}>
+                        <Button
+                          block
+                          variant={p.highlight ? 'primary' : 'secondary'}
+                          onClick={() => setSelected(p)}
+                        >
                           Assinar
                         </Button>
                       )
