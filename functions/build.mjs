@@ -6,7 +6,7 @@ const ctx = await context({
   outfile: 'lib/index.js',
   bundle: true,
   platform: 'node',
-  target: 'node20',
+  target: 'node24',
   format: 'esm',
   sourcemap: true,
   packages: 'external',
