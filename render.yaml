@@ -21,8 +21,9 @@ services:
         sync: false
       - key: VITE_USE_EMULATORS
         value: 'false'
+      # Blaze: the browser talks to the Cloud Functions. Back to 'true' only to roll back to Spark.
       - key: VITE_SPARK
-        value: 'true'
+        value: 'false'
     routes:
       - type: rewrite
         source: /*
