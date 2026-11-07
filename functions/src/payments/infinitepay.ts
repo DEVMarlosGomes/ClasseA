@@ -12,8 +12,13 @@ import { defineSecret } from 'firebase-functions/params';
  * functions/.env.<project>, plus the INFINITEPAY_API_KEY secret (inchk_..., needed for valid_until).
  */
 export const ONLINE_ENABLED = process.env.ONLINE_PAYMENTS === 'infinitepay';
-export const INFINITEPAY_API_KEY = defineSecret('INFINITEPAY_API_KEY');
-export const ONLINE_SECRETS = ONLINE_ENABLED ? [INFINITEPAY_API_KEY] : [];
+// Declared only when enabled: defineSecret() alone makes the deploy demand the secret.
+const INFINITEPAY_API_KEY = ONLINE_ENABLED ? defineSecret('INFINITEPAY_API_KEY') : null;
+export const ONLINE_SECRETS = INFINITEPAY_API_KEY ? [INFINITEPAY_API_KEY] : [];
+const apiKey = () => {
+  if (!INFINITEPAY_API_KEY) throw new Error('InfinitePay is off (ONLINE_PAYMENTS is not "infinitepay").');
+  return INFINITEPAY_API_KEY.value();
+};
 
 const BASE = 'https://api.checkout.infinitepay.io';
 const TIMEOUT_MS = 10_000;
@@ -27,7 +32,7 @@ const handle = () => {
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Api-Key': INFINITEPAY_API_KEY.value() },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Api-Key': apiKey() },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });

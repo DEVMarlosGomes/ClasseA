@@ -3,7 +3,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { InvalidWebhookSignatureError, WebhookSignatureValidator } from 'mercadopago';
 import { FieldValue, REGION, db } from '../lib/admin';
 import { syncInstallment, syncPayment, syncPreapproval } from './mpSync';
-import { MP_WEBHOOK_SECRET, PROVIDER, WEBHOOK_SECRETS } from './provider';
+import { PROVIDER, WEBHOOK_SECRETS, mpWebhookSecret } from './provider';
 
 const HANDLERS: Record<string, (id: string) => Promise<string>> = {
   subscription_preapproval: syncPreapproval,
@@ -47,7 +47,7 @@ export const mpWebhook = onRequest(
         xSignature: req.get('x-signature'),
         xRequestId: requestId,
         dataId,
-        secret: MP_WEBHOOK_SECRET.value(),
+        secret: mpWebhookSecret(),
       });
     } catch (e) {
       const reason = e instanceof InvalidWebhookSignatureError ? e.reason : 'unknown';
