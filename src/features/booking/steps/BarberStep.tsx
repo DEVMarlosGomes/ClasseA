@@ -38,7 +38,7 @@ export function BarberStep({ onPicked }: { onPicked: () => void }) {
   const { barberId, setBarber } = useBooking();
 
   if (barbers.isError) return <ErrorState onRetry={() => void barbers.refetch()} />;
-  if (barbers.isLoading)
+  if (barbers.isLoading || barbers.isPlaceholderData)
     return (
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Barber, Service } from '@shared/types';
 import { useBarbers, useServices, useShopSettings } from '@/lib/catalog';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -7,6 +7,24 @@ import { useBooking } from './store';
 
 export function eligibleBarbers(barbers: Barber[] | undefined, serviceIds: string[]): Barber[] {
   return (barbers ?? []).filter((b) => serviceIds.every((id) => b.serviceIds.includes(id)));
+}
+
+/**
+ * A barber chosen earlier (kept in sessionStorage) may have been deactivated or replaced since. Once the
+ * real list arrives, drop that choice and send the client back to pick again instead of booking a ghost.
+ */
+export function useStaleBarberGuard() {
+  const barbers = useBarbers();
+  const barberId = useBooking((s) => s.barberId);
+  const step = useBooking((s) => s.step);
+  const setBarber = useBooking((s) => s.setBarber);
+  const goTo = useBooking((s) => s.goTo);
+  useEffect(() => {
+    if (barbers.isPlaceholderData || !barbers.data || !barberId || barberId === 'any') return;
+    if (barbers.data.some((b) => b.id === barberId)) return;
+    setBarber(null);
+    if (step > 1) goTo(1);
+  }, [barbers.isPlaceholderData, barbers.data, barberId, step, setBarber, goTo]);
 }
 
 /** Everything the booking steps derive from catalogue + selection. */

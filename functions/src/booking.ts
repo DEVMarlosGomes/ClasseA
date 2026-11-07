@@ -159,7 +159,12 @@ async function assertClientLimits(clientId: string, date: string, start: string,
 
 /** Picks the barber with the earliest availability for "Sem preferência" at the requested time. */
 async function resolveBarber(barberId: string, date: string, start: string, services: Service[], settings: ShopSettings): Promise<Barber> {
-  if (barberId !== 'any') return getBarber(barberId);
+  if (barberId !== 'any') {
+    // New bookings and reschedules only: a deactivated profile must not receive appointments nobody sees.
+    const barber = await getBarber(barberId);
+    if (!barber.active) fail('failed-precondition', 'barber-unavailable', 'Este barbeiro não está recebendo agendamentos. Escolha outro profissional.');
+    return barber;
+  }
   const durationMin = services.reduce((sum, s) => sum + s.durationMin, 0);
   const snap = await db.collection('barbers').where('active', '==', true).orderBy('order').get();
   for (const d of snap.docs) {

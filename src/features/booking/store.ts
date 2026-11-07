@@ -32,7 +32,7 @@ interface BookingState {
 
   goTo: (step: StepIndex) => void;
   toggleService: (id: string) => void;
-  setBarber: (id: string) => void;
+  setBarber: (id: string | null) => void;
   setDate: (date: string) => void;
   setStart: (start: string | null) => void;
   setPayment: (mode: PaymentMode, methodId?: string | null) => void;

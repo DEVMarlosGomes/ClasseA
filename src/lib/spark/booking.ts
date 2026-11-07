@@ -223,7 +223,12 @@ async function resolveBarber(
   services: Service[],
   settings: ShopSettings,
 ): Promise<Barber> {
-  if (barberId !== 'any') return getBarber(barberId);
+  if (barberId !== 'any') {
+    // New bookings and reschedules only: a deactivated profile must not receive appointments nobody sees.
+    const barber = await getBarber(barberId);
+    if (!barber.active) fail('failed-precondition', 'barber-unavailable', 'Este barbeiro não está recebendo agendamentos. Escolha outro profissional.');
+    return barber;
+  }
   const durationMin = services.reduce((sum, s) => sum + s.durationMin, 0);
   for (const b of await activeBarbers()) {
     if (!services.every((s) => b.serviceIds.includes(s.id))) continue;

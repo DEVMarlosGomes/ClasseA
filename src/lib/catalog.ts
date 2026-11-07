@@ -5,14 +5,16 @@ import { loadFirestoreLite } from './firebase';
 
 const STALE = 5 * 60 * 1000;
 
-async function fetchActive<T>(name: string, fallback: T[]): Promise<T[]> {
+/** `fallback` null = let the error surface (data whose ids get written into bookings must be real). */
+async function fetchActive<T>(name: string, fallback: T[] | null): Promise<T[]> {
   try {
     const { db, collection, getDocs, query, where } = await loadFirestoreLite();
     const snap = await getDocs(query(collection(db, name), where('active', '==', true)));
     return snap.docs
       .map((d) => ({ id: d.id, ...d.data() }) as unknown as T & { order?: number })
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  } catch {
+  } catch (e) {
+    if (fallback === null) throw e;
     return fallback;
   }
 }
@@ -55,10 +57,12 @@ export function usePlans() {
 export function useBarbers() {
   return useQuery({
     queryKey: ['barbers'],
-    queryFn: () => fetchActive<Barber>('barbers', PUBLIC_BARBERS),
+    queryFn: () => fetchActive<Barber>('barbers', null),
     staleTime: STALE,
-    initialData: PUBLIC_BARBERS,
-    initialDataUpdatedAt: 0,
+    // Placeholder only: the landing paints at once, but booking waits for the real documents. Their ids
+    // differ from these fixed ones (e.g. a barber linked to his account), and a booking saved with a
+    // placeholder id never reaches that barber's agenda.
+    placeholderData: PUBLIC_BARBERS,
   });
 }
 

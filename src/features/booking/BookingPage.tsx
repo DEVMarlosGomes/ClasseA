@@ -13,6 +13,7 @@ import { fade, slide } from '@/lib/motion';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { BookingSummary } from './BookingSummary';
 import { type BookingResult, STEPS, type StepIndex, useBooking } from './store';
+import { useStaleBarberGuard } from './useBookingData';
 import { BarberStep } from './steps/BarberStep';
 import { DayStep } from './steps/DayStep';
 import { IdentifyStep } from './steps/IdentifyStep';
@@ -63,6 +64,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { user, roles, ensure, refresh, sendVerification } = useAuth();
   const b = useBooking();
+  useStaleBarberGuard();
   const [submitting, setSubmitting] = useState(false);
   const signedIn = !!user && roles.length > 0;
   const rescheduling = !!b.rescheduleId;
@@ -135,7 +137,11 @@ export default function BookingPage() {
       b.finish(result);
     } catch (e) {
       if (e instanceof ApiError && e.reason === 'slot-taken') b.slotTaken();
-      else if (e instanceof ApiError && e.reason === 'email-unverified') {
+      else if (e instanceof ApiError && e.reason === 'barber-unavailable') {
+        toast.error(e.message);
+        b.setBarber(null);
+        b.goTo(1);
+      } else if (e instanceof ApiError && e.reason === 'email-unverified') {
         // After clicking the e-mail link the token must be refreshed before trying again.
         void refresh();
         toast.error(e.message, {
